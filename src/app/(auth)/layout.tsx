@@ -24,7 +24,7 @@ const features = [
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-dvh">
+    <div className="light-auth flex min-h-dvh bg-background text-foreground">
       <div className="hidden w-[55%] flex-col justify-between bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-10 text-primary-foreground lg:flex">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
