@@ -1,17 +1,18 @@
+import { cache } from "react"
 import { redirect } from "next/navigation"
 
 import { createClient } from "@/lib/supabase/server"
 import type { AppRole } from "@/types/inspection"
 import { hasPermission, type Permission } from "./permissions"
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
   return user
-}
+})
 
 export async function requireUser() {
   const user = await getCurrentUser()
@@ -23,16 +24,14 @@ export async function requireUser() {
   return user
 }
 
-export async function getCurrentRole(): Promise<AppRole> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export const getCurrentRole = cache(async (): Promise<AppRole> => {
+  const user = await getCurrentUser()
 
   if (!user) {
     return "VIEWER"
   }
 
+  const supabase = await createClient()
   const { data } = await supabase
     .from("inspection_user_roles")
     .select("role")
@@ -40,7 +39,7 @@ export async function getCurrentRole(): Promise<AppRole> {
     .maybeSingle()
 
   return (data?.role as AppRole | undefined) ?? "VIEWER"
-}
+})
 
 export function hasRole(role: AppRole, allowedRoles: AppRole[]) {
   return allowedRoles.includes(role)

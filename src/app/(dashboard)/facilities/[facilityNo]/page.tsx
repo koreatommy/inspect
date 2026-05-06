@@ -1,11 +1,16 @@
+import { Suspense } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { FacilityAlertModal } from "@/components/facility/facility-alert-modal"
-import { FacilityTabs } from "@/components/facility/facility-tabs"
 import { buttonVariants } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/server"
 import { cn } from "@/lib/utils"
+
+import {
+  FacilityDetailTabs,
+  FacilityDetailTabsSkeleton,
+} from "./facility-detail-tabs"
 
 type FacilityDetailPageProps = {
   params: Promise<{
@@ -26,51 +31,11 @@ export default async function FacilityDetailPage({
   const decodedFacilityNo = decodeURIComponent(facilityNo)
   const supabase = await createClient()
 
-  const [
-    { data: facility },
-    { data: equipment },
-    { data: legalInspections },
-    { data: safetyEducations },
-    { data: liabilityInsurances },
-    { data: facilityManagers },
-    { data: monthlyInspections },
-  ] = await Promise.all([
-    supabase
-      .from("facilities")
-      .select("*")
-      .eq("facility_no", decodedFacilityNo)
-      .maybeSingle(),
-    supabase
-      .from("equipment")
-      .select("*")
-      .eq("facility_no", decodedFacilityNo)
-      .order("equipment_name", { ascending: true }),
-    supabase
-      .from("facility_legal_inspections")
-      .select("*")
-      .eq("facility_no", decodedFacilityNo)
-      .order("inspection_date", { ascending: false }),
-    supabase
-      .from("safety_educations")
-      .select("*")
-      .eq("facility_no", decodedFacilityNo)
-      .order("education_date", { ascending: false }),
-    supabase
-      .from("liability_insurances")
-      .select("*")
-      .eq("facility_no", decodedFacilityNo)
-      .order("join_date", { ascending: false }),
-    supabase
-      .from("facility_managers")
-      .select("*")
-      .eq("facility_no", decodedFacilityNo)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("monthly_inspections")
-      .select("*")
-      .eq("facility_no", decodedFacilityNo)
-      .order("inspection_month", { ascending: false }),
-  ])
+  const { data: facility } = await supabase
+    .from("facilities")
+    .select("*")
+    .eq("facility_no", decodedFacilityNo)
+    .maybeSingle()
 
   if (!facility) {
     notFound()
@@ -106,15 +71,12 @@ export default async function FacilityDetailPage({
           </Link>
         </div>
       </div>
-      <FacilityTabs
-        facility={facility}
-        equipment={equipment ?? []}
-        legalInspections={legalInspections ?? []}
-        safetyEducations={safetyEducations ?? []}
-        liabilityInsurances={liabilityInsurances ?? []}
-        facilityManagers={facilityManagers ?? []}
-        monthlyInspections={monthlyInspections ?? []}
-      />
+      <Suspense fallback={<FacilityDetailTabsSkeleton />}>
+        <FacilityDetailTabs
+          facility={facility}
+          facilityNo={decodedFacilityNo}
+        />
+      </Suspense>
     </div>
   )
 }
