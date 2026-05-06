@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { getCurrentRole } from "@/lib/auth/helpers"
+import { hasPermission } from "@/lib/auth/permissions"
 import { LedgerMobileSummary } from "@/components/ledger/ledger-mobile-summary"
 import { LedgerTable, type LedgerDisplayRow } from "@/components/ledger/ledger-table"
 import { PrintButton } from "@/components/ledger/print-button"
@@ -39,6 +41,7 @@ function ledgerRowToDisplay(row: LedgerRow): LedgerDisplayRow {
 
 export default async function LedgerPage({ params }: LedgerPageProps) {
   const { inspectionId } = await params
+  const role = await getCurrentRole()
   const supabase = await createClient()
 
   const [{ data: inspection }, { data: storedLedger }, { data: items }] =
@@ -131,6 +134,13 @@ export default async function LedgerPage({ params }: LedgerPageProps) {
           })
     )
 
+  const isLocked = inspection.status === "locked"
+  const canEditInspection =
+    inspection.status === "completed"
+      ? hasPermission(role, "inspection:edit-completed")
+      : hasPermission(role, "inspection:edit")
+  const showEditButton = !isLocked && canEditInspection
+
   return (
     <div className="space-y-4 print:space-y-0">
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
@@ -145,12 +155,14 @@ export default async function LedgerPage({ params }: LedgerPageProps) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/inspections/${inspectionId}`}
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            이전
-          </Link>
+          {showEditButton ? (
+            <Link
+              href={`/inspections/${inspectionId}`}
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              수정
+            </Link>
+          ) : null}
           <PrintButton
             documentTitleForPdf={ledgerPrintDocumentTitle(
               row.facility_no,

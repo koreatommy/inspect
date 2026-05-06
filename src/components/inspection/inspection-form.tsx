@@ -38,9 +38,10 @@ export function InspectionForm({
     "inspection:sign-consigned-inspector"
   )
   const canComplete = hasPermission(role, "inspection:complete")
-  const isCompleted =
-    inspection.status === "completed" || inspection.status === "locked"
-  const isReadOnly = isCompleted && role !== "ADMIN"
+  const isLocked = inspection.status === "locked"
+  const canEditCompleted = hasPermission(role, "inspection:edit-completed")
+  const isCompleted = inspection.status === "completed"
+  const isReadOnly = isLocked || (isCompleted && !canEditCompleted)
 
   return (
     <form action={saveInspectionDraft} className="space-y-6">

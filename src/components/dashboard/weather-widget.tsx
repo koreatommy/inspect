@@ -141,7 +141,7 @@ export function WeatherWidget({ className }: { className?: string }) {
     return (
       <div
         className={cn(
-          "mt-3 flex max-w-md items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground ring-1 ring-foreground/5",
+          "mt-3 flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground ring-1 ring-foreground/5",
           className
         )}
         role="status"
@@ -157,7 +157,7 @@ export function WeatherWidget({ className }: { className?: string }) {
     return (
       <div
         className={cn(
-          "mt-3 max-w-md rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground",
+          "mt-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground",
           className
         )}
         role="alert"
@@ -173,7 +173,7 @@ export function WeatherWidget({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "mt-3 flex max-w-md flex-wrap items-center gap-4 rounded-xl border border-border bg-card px-4 py-3 text-sm ring-1 ring-foreground/10",
+        "mt-3 flex flex-wrap items-center gap-4 rounded-xl border border-border bg-card px-4 py-3 text-sm ring-1 ring-foreground/10",
         className
       )}
       aria-label={`${data.placeLabel} 날씨 ${summary} 기온 섭씨 ${data.tempC}도`}

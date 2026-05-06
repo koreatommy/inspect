@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { FacilityAlertModal } from "@/components/facility/facility-alert-modal"
 import { FacilityTabs } from "@/components/facility/facility-tabs"
 import { buttonVariants } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/server"
@@ -10,12 +11,18 @@ type FacilityDetailPageProps = {
   params: Promise<{
     facilityNo: string
   }>
+  searchParams: Promise<{
+    deleted?: string
+    error?: string
+  }>
 }
 
 export default async function FacilityDetailPage({
   params,
+  searchParams,
 }: FacilityDetailPageProps) {
   const { facilityNo } = await params
+  const { deleted, error } = await searchParams
   const decodedFacilityNo = decodeURIComponent(facilityNo)
   const supabase = await createClient()
 
@@ -71,6 +78,7 @@ export default async function FacilityDetailPage({
 
   return (
     <div className="space-y-6">
+      <FacilityAlertModal deleted={deleted} error={error} />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-sm text-muted-foreground">

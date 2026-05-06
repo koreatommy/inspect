@@ -6,6 +6,7 @@ import { redirect } from "next/navigation"
 import { getCurrentRole, hasRole } from "@/lib/auth/helpers"
 import { hasPermission } from "@/lib/auth/permissions"
 import { validateCompletion } from "@/lib/inspection/complete"
+import { refreshLedgerSnapshotForInspection } from "@/lib/inspection/refresh-ledger-snapshot"
 import { buildLedgerRow } from "@/lib/inspection/snapshot"
 import { createClient } from "@/lib/supabase/server"
 import {
@@ -199,12 +200,21 @@ async function executeInspectionDraftSave(formData: FormData) {
     redirect(`/inspections/${inspectionId}?error=save-failed`)
   }
 
+  if (inspectionState.status === "completed") {
+    try {
+      await refreshLedgerSnapshotForInspection(supabase, inspectionId)
+    } catch {
+      redirect(`/inspections/${inspectionId}?error=ledger-create-failed`)
+    }
+  }
+
   return inspectionId
 }
 
 export async function saveInspectionDraft(formData: FormData) {
   const inspectionId = await executeInspectionDraftSave(formData)
   revalidatePath(`/inspections/${inspectionId}`)
+  redirect(`/inspections/${inspectionId}?saved=1`)
 }
 
 export async function saveInspectionDraftAndOpenLedger(formData: FormData) {

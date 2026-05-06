@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils"
 type Inspection = {
   id: string
   facility_no: string
+  facility_name: string | null
   inspection_month: string
   inspection_date: string | null
   status: string
@@ -52,8 +53,16 @@ export function RecentInspections({ inspections }: { inspections: Inspection[] }
                 const badge = getStatusBadge(inspection.status)
                 return (
                   <TableRow key={inspection.id}>
-                    <TableCell className="font-mono text-xs">
-                      {inspection.facility_no}
+                    <TableCell className="text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono">{inspection.facility_no}</span>
+                        <span
+                          className="max-w-[12rem] truncate text-muted-foreground"
+                          title={inspection.facility_name ?? ""}
+                        >
+                          {inspection.facility_name ?? "-"}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>{inspection.inspection_month}</TableCell>
                     <TableCell className="hidden sm:table-cell">

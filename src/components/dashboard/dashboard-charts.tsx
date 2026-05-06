@@ -1,10 +1,11 @@
 "use client"
 
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -16,10 +17,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 type MonthlyData = {
-  month: string
-  completed: number
-  draft: number
-  needsRevision: number
+  monthLabel: string
+  totalCount: number
 }
 
 type StatusData = {
@@ -28,7 +27,7 @@ type StatusData = {
   color: string
 }
 
-export function MonthlyBarChart({ data }: { data: MonthlyData[] }) {
+export function MonthlyInspectionTrendChart({ data }: { data: MonthlyData[] }) {
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -37,12 +36,13 @@ export function MonthlyBarChart({ data }: { data: MonthlyData[] }) {
       <CardContent>
         <div className="h-[260px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} barGap={2}>
+            <LineChart data={data} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis
-                dataKey="month"
+                dataKey="monthLabel"
                 tick={{ fontSize: 12 }}
                 className="fill-muted-foreground"
+                interval={0}
               />
               <YAxis
                 allowDecimals={false}
@@ -50,6 +50,7 @@ export function MonthlyBarChart({ data }: { data: MonthlyData[] }) {
                 className="fill-muted-foreground"
               />
               <Tooltip
+                formatter={(value) => [`${value}건`, "점검건수"]}
                 contentStyle={{
                   borderRadius: "0.5rem",
                   border: "1px solid var(--border)",
@@ -58,25 +59,24 @@ export function MonthlyBarChart({ data }: { data: MonthlyData[] }) {
                   fontSize: "0.875rem",
                 }}
               />
-              <Bar
-                dataKey="completed"
-                name="완료"
-                fill="var(--chart-1)"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="draft"
-                name="작성중"
-                fill="var(--chart-2)"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="needsRevision"
-                name="수정요청"
-                fill="var(--chart-3)"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
+              <Line
+                type="monotone"
+                dataKey="totalCount"
+                name="점검건수"
+                stroke="var(--chart-1)"
+                strokeWidth={2}
+                dot={{ r: 3, strokeWidth: 1 }}
+                activeDot={{ r: 5 }}
+              >
+                <LabelList
+                  dataKey="totalCount"
+                  position="top"
+                  formatter={(value) => (value != null ? String(value) : "")}
+                  className="fill-muted-foreground"
+                  fontSize={11}
+                />
+              </Line>
+            </LineChart>
           </ResponsiveContainer>
         </div>
       </CardContent>

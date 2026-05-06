@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { MonthlyResultRealtimeChart } from "@/components/inspection/monthly-result-realtime-chart"
 import { requirePermission } from "@/lib/auth/helpers"
 import { getKoreaDateParts } from "@/lib/date"
 import { createClient } from "@/lib/supabase/server"
@@ -138,7 +139,8 @@ export default async function NewInspectionPage({
           생성합니다.
         </p>
       </div>
-      <Card className="max-w-2xl">
+      <MonthlyResultRealtimeChart inspectionMonth={thisMonth()} />
+      <Card>
         <CardHeader>
           <CardTitle>점검 대상 선택</CardTitle>
         </CardHeader>

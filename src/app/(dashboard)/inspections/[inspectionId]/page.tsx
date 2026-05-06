@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation"
 import { notFound } from "next/navigation"
 
+import { InspectionSaveAlertModal } from "@/components/inspection/inspection-save-alert-modal"
 import { InspectionForm } from "@/components/inspection/inspection-form"
 import { getCurrentRole } from "@/lib/auth/helpers"
 import { hasPermission } from "@/lib/auth/permissions"
+import { hydrateInspectionItemsFromLedger } from "@/lib/inspection/hydrate-items-from-ledger"
 import { createClient } from "@/lib/supabase/server"
 
 type InspectionPageProps = {
@@ -12,6 +14,7 @@ type InspectionPageProps = {
   }>
   searchParams: Promise<{
     error?: string
+    saved?: string
   }>
 }
 
@@ -21,10 +24,15 @@ export default async function InspectionPage({
 }: InspectionPageProps) {
   const role = await getCurrentRole()
   const { inspectionId } = await params
-  const { error } = await searchParams
+  const { error, saved } = await searchParams
   const supabase = await createClient()
 
-  const [{ data: inspection }, { data: items }, { data: facility }] =
+  const [
+    { data: inspection },
+    { data: items },
+    { data: facility },
+    { data: storedLedger },
+  ] =
     await Promise.all([
       supabase
         .from("monthly_inspections")
@@ -40,6 +48,11 @@ export default async function InspectionPage({
         .from("monthly_inspections")
         .select("facility_no")
         .eq("id", inspectionId)
+        .maybeSingle(),
+      supabase
+        .from("inspection_ledger_rows")
+        .select("*")
+        .eq("inspection_id", inspectionId)
         .maybeSingle(),
     ])
 
@@ -64,8 +77,14 @@ export default async function InspectionPage({
     .eq("facility_no", facility?.facility_no ?? inspection.facility_no)
     .maybeSingle()
 
+  const hydratedItems =
+    inspection.status === "completed" || inspection.status === "locked"
+      ? hydrateInspectionItemsFromLedger(items ?? [], storedLedger)
+      : (items ?? [])
+
   return (
     <div className="space-y-6">
+      <InspectionSaveAlertModal saved={saved} />
       <div>
         <p className="text-sm text-muted-foreground">
           {inspection.inspection_month} / {inspection.inspection_date}
@@ -84,7 +103,7 @@ export default async function InspectionPage({
           {decodeURIComponent(error)}
         </p>
       ) : null}
-      <InspectionForm inspection={inspection} items={items ?? []} role={role} />
+      <InspectionForm inspection={inspection} items={hydratedItems} role={role} />
     </div>
   )
 }

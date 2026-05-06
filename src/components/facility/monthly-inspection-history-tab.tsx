@@ -13,6 +13,8 @@ import { formatInspectionCompletedAt } from "@/lib/date"
 import type { MonthlyInspectionRow } from "@/types/database"
 import { cn } from "@/lib/utils"
 
+import { MonthlyInspectionHistoryDeleteButton } from "./monthly-inspection-history-delete-button"
+
 const statusLabel: Record<MonthlyInspectionRow["status"], string> = {
   draft: "작성중",
   completed: "완료",
@@ -22,22 +24,29 @@ const statusLabel: Record<MonthlyInspectionRow["status"], string> = {
 
 export function MonthlyInspectionHistoryTab({
   inspections,
+  facilityNo,
 }: {
   inspections: MonthlyInspectionRow[]
+  facilityNo: string
 }) {
   if (inspections.length === 0) {
     return (
-      <div className="space-y-2 py-4">
-        <p className="text-center text-sm text-muted-foreground">
-          월간 안전점검 이력이 없습니다. 「점검 시작」으로 월간 점검을 생성하면
-          여기에 표시됩니다.
+      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-10 text-center">
+        <p className="text-sm text-muted-foreground">
+          월간 안전점검 이력이 없습니다. 점검을 시작하면 이력이 여기에 표시됩니다.
         </p>
+        <Link
+          href={`/inspections/new?facilityNo=${encodeURIComponent(facilityNo)}`}
+          className={cn(buttonVariants({ size: "sm" }))}
+        >
+          바로 점검하기
+        </Link>
       </div>
     )
   }
 
   return (
-    <Table>
+    <Table className="rounded-lg border">
       <TableHeader>
         <TableRow>
           <TableHead>점검월</TableHead>
@@ -67,14 +76,29 @@ export function MonthlyInspectionHistoryTab({
               {formatInspectionCompletedAt(inspection.completed_at)}
             </TableCell>
             <TableCell className="text-right">
-              <Link
-                href={`/inspections/${inspection.id}/ledger`}
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "sm" })
-                )}
-              >
-                대장
-              </Link>
+              <div className="flex justify-end gap-1">
+                <Link
+                  href={`/inspections/${inspection.id}/ledger`}
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "sm" })
+                  )}
+                >
+                  대장
+                </Link>
+                <Link
+                  href={`/inspections/${inspection.id}`}
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "sm" })
+                  )}
+                >
+                  편집
+                </Link>
+                <MonthlyInspectionHistoryDeleteButton
+                  inspectionId={inspection.id}
+                  facilityNo={facilityNo}
+                  inspectionMonth={inspection.inspection_month}
+                />
+              </div>
             </TableCell>
           </TableRow>
         ))}
