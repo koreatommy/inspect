@@ -4,6 +4,9 @@ import { Header } from "@/components/layout/header"
 import { Sidebar } from "@/components/layout/sidebar"
 import { getCurrentRole, requireUser } from "@/lib/auth/helpers"
 
+/** 로그인·Supabase 세션이 필요한 구역이라 빌드 시 정적 프리렌더를 하지 않습니다. */
+export const dynamic = "force-dynamic"
+
 export default async function DashboardLayout({
   children,
 }: {
