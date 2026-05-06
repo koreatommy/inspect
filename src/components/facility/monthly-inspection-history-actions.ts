@@ -45,7 +45,6 @@ export async function deleteFacilityMonthlyInspection(formData: FormData) {
   revalidatePath("/")
   revalidatePath("/inspections/history")
   revalidatePath(`/facilities/${inspection.facility_no}`)
-  revalidatePath("/settings/inspection-history")
 
   redirect(`/facilities/${encodeURIComponent(facilityNo)}?deleted=1`)
 }

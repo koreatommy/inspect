@@ -17,10 +17,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { getCurrentRole } from "@/lib/auth/helpers"
+import { hasPermission } from "@/lib/auth/permissions"
 import { formatInspectionCompletedAt } from "@/lib/date"
 import { getStatusBadge } from "@/lib/inspection/status"
 import { createClient } from "@/lib/supabase/server"
 import { cn } from "@/lib/utils"
+
+import { DeleteInspectionButton } from "./delete-button"
 
 const PAGE_SIZE = 20
 
@@ -28,17 +32,30 @@ type HistoryPageProps = {
   searchParams: Promise<{
     month?: string
     q?: string
+    status?: string
     page?: string
+    deleted?: string
+    error?: string
   }>
 }
 
 export default async function InspectionHistoryPage({
   searchParams,
 }: HistoryPageProps) {
-  const { month = "", q = "", page: pageStr = "1" } = await searchParams
+  const {
+    month = "",
+    q = "",
+    status: statusFilter = "",
+    page: pageStr = "1",
+    deleted,
+    error,
+  } = await searchParams
   const currentPage = Math.max(1, parseInt(pageStr, 10) || 1)
   const from = (currentPage - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
+
+  const role = await getCurrentRole()
+  const canManageHistory = hasPermission(role, "settings:inspection-history-manage")
 
   const supabase = await createClient()
   let query = supabase
@@ -49,6 +66,11 @@ export default async function InspectionHistoryPage({
 
   if (month) query = query.eq("inspection_month", month)
   if (q) query = query.ilike("facility_no", `%${q}%`)
+  const validStatuses = ["draft", "completed"] as const
+  type InspectionStatus = (typeof validStatuses)[number]
+  if (statusFilter && validStatuses.includes(statusFilter as InspectionStatus)) {
+    query = query.eq("status", statusFilter as InspectionStatus)
+  }
 
   const { data: inspections, count } = await query
   const totalCount = count ?? 0
@@ -56,6 +78,7 @@ export default async function InspectionHistoryPage({
   const paginationSearchParams: Record<string, string> = {}
   if (month) paginationSearchParams.month = month
   if (q) paginationSearchParams.q = q
+  if (statusFilter) paginationSearchParams.status = statusFilter
 
   return (
     <div className="space-y-6">
@@ -65,12 +88,37 @@ export default async function InspectionHistoryPage({
           시설번호와 점검월 기준으로 완료 및 작성중 이력을 조회합니다.
         </p>
       </div>
+      {deleted === "1" ? (
+        <p className="rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-800 dark:text-green-300">
+          점검 이력이 삭제되었습니다.
+        </p>
+      ) : null}
+      {error ? (
+        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error === "not-found"
+            ? "해당 점검 이력을 찾을 수 없습니다."
+            : error === "delete-failed"
+              ? "삭제에 실패했습니다. 권한을 확인해 주세요."
+              : error === "invalid-id"
+                ? "유효하지 않은 점검 ID입니다."
+                : "요청을 처리할 수 없습니다."}
+        </p>
+      ) : null}
 
       <Card>
         <CardContent className="space-y-4 pt-4">
-          <form className="grid gap-2 sm:grid-cols-[1fr_180px_auto]">
+          <form className="grid gap-2 sm:grid-cols-[1fr_180px_140px_auto]">
             <Input name="q" defaultValue={q} placeholder="시설번호 검색" />
             <Input name="month" type="month" defaultValue={month} />
+            <select
+              name="status"
+              defaultValue={statusFilter}
+              className="h-10 rounded-lg border border-input bg-background px-2.5 text-sm"
+            >
+              <option value="">전체 상태</option>
+              <option value="draft">작성중</option>
+              <option value="completed">완료</option>
+            </select>
             <button className={cn(buttonVariants())}>검색</button>
           </form>
 
@@ -99,6 +147,13 @@ export default async function InspectionHistoryPage({
                 <TableBody>
                   {(inspections ?? []).map((inspection) => {
                     const badge = getStatusBadge(inspection.status)
+                    const canEditInspection =
+                      inspection.status === "completed"
+                        ? hasPermission(role, "inspection:edit-completed")
+                        : hasPermission(role, "inspection:edit")
+                    const showEditButton =
+                      inspection.status !== "locked" && canEditInspection
+
                     return (
                       <TableRow key={inspection.id}>
                         <TableCell className="font-mono text-xs">{inspection.facility_no}</TableCell>
@@ -113,14 +168,33 @@ export default async function InspectionHistoryPage({
                           {formatInspectionCompletedAt(inspection.completed_at)}
                         </TableCell>
                         <TableCell>
-                          <Link
-                            href={`/inspections/${inspection.id}/ledger`}
-                            className={cn(
-                              buttonVariants({ variant: "outline", size: "sm" })
-                            )}
-                          >
-                            대장
-                          </Link>
+                          <div className="flex items-center gap-1">
+                            <Link
+                              href={`/inspections/${inspection.id}/ledger`}
+                              className={cn(
+                                buttonVariants({ variant: "outline", size: "sm" })
+                              )}
+                            >
+                              대장
+                            </Link>
+                            {showEditButton ? (
+                              <Link
+                                href={`/inspections/${inspection.id}`}
+                                className={cn(
+                                  buttonVariants({ variant: "outline", size: "sm" })
+                                )}
+                              >
+                                편집
+                              </Link>
+                            ) : null}
+                            {canManageHistory ? (
+                              <DeleteInspectionButton
+                                inspectionId={inspection.id}
+                                facilityNo={inspection.facility_no}
+                                inspectionMonth={inspection.inspection_month}
+                              />
+                            ) : null}
+                          </div>
                         </TableCell>
                       </TableRow>
                     )
@@ -139,9 +213,13 @@ export default async function InspectionHistoryPage({
           ) : (
             <EmptyState
               title="점검 이력이 없습니다"
-              description={q || month ? "검색 조건에 맞는 결과가 없습니다." : "아직 점검을 시작하지 않았습니다."}
-              actionLabel={!q && !month ? "새 점검 시작" : undefined}
-              actionHref={!q && !month ? "/inspections/new" : undefined}
+              description={
+                q || month || statusFilter
+                  ? "검색 조건에 맞는 결과가 없습니다."
+                  : "아직 점검을 시작하지 않았습니다."
+              }
+              actionLabel={!q && !month && !statusFilter ? "새 점검 시작" : undefined}
+              actionHref={!q && !month && !statusFilter ? "/inspections/new" : undefined}
             />
           )}
         </CardContent>

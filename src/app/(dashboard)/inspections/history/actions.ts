@@ -6,8 +6,8 @@ import { redirect } from "next/navigation"
 import { requirePermission } from "@/lib/auth/helpers"
 import { createClient } from "@/lib/supabase/server"
 
-export async function deleteMonthlyInspection(formData: FormData) {
-  await requirePermission("settings:inspection-history-manage", "/settings")
+export async function deleteMonthlyInspectionFromHistory(formData: FormData) {
+  await requirePermission("settings:inspection-history-manage", "/inspections/history")
 
   const inspectionId = String(formData.get("inspectionId") ?? "").trim()
 
@@ -16,7 +16,7 @@ export async function deleteMonthlyInspection(formData: FormData) {
       inspectionId
     )
   ) {
-    redirect("/settings/inspection-history?error=invalid-id")
+    redirect("/inspections/history?error=invalid-id")
   }
 
   const supabase = await createClient()
@@ -28,7 +28,7 @@ export async function deleteMonthlyInspection(formData: FormData) {
     .maybeSingle()
 
   if (!inspection) {
-    redirect("/settings/inspection-history?error=not-found")
+    redirect("/inspections/history?error=not-found")
   }
 
   const { error } = await supabase
@@ -37,13 +37,12 @@ export async function deleteMonthlyInspection(formData: FormData) {
     .eq("id", inspectionId)
 
   if (error) {
-    redirect("/settings/inspection-history?error=delete-failed")
+    redirect("/inspections/history?error=delete-failed")
   }
 
   revalidatePath("/")
   revalidatePath("/inspections/history")
   revalidatePath(`/facilities/${inspection.facility_no}`)
-  revalidatePath("/settings/inspection-history")
 
-  redirect("/settings/inspection-history?deleted=1")
+  redirect("/inspections/history?deleted=1")
 }

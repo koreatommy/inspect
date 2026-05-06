@@ -21,6 +21,30 @@ const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
 const RECOMMENDED_ROLE: AppRole = "MANAGER"
 
 export function RolePermissionMatrix() {
+  const getGrantedRoles = (
+    permission: (typeof PERMISSION_MATRIX_ROWS)[number]["permission"]
+  ) => ROLE_MATRIX_COLUMNS.filter((role) => hasPermission(role, permission))
+
+  const isDifferentPermission = (
+    permission: (typeof PERMISSION_MATRIX_ROWS)[number]["permission"]
+  ) => {
+    const grantedCount = getGrantedRoles(permission).length
+    return grantedCount > 0 && grantedCount < ROLE_MATRIX_COLUMNS.length
+  }
+
+  const getPermissionScopeLabel = (
+    permission: (typeof PERMISSION_MATRIX_ROWS)[number]["permission"]
+  ) => {
+    const roles = getGrantedRoles(permission)
+    const key = roles.join(",")
+
+    if (key === "ADMIN") return "시스템관리자 전용"
+    if (key === "ADMIN,MANAGER") return "안전관리자 이상"
+    if (key === "ADMIN,MANAGER,INSPECTOR") return "실무자 이상"
+    if (key === "VIEWER") return "조회자 전용"
+    return null
+  }
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {ROLE_MATRIX_COLUMNS.map((role) => {
@@ -65,7 +89,20 @@ export function RolePermissionMatrix() {
               {permissions.map(({ permission, label }) => (
                 <div key={permission} className="flex items-start gap-2 text-sm">
                   <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                  <span>{label}</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span
+                      className={cn(
+                        isDifferentPermission(permission) && "text-blue-600"
+                      )}
+                    >
+                      {label}
+                    </span>
+                    {getPermissionScopeLabel(permission) ? (
+                      <Badge variant="secondary" className="h-5 text-[10px]">
+                        {getPermissionScopeLabel(permission)}
+                      </Badge>
+                    ) : null}
+                  </div>
                 </div>
               ))}
 
@@ -78,7 +115,14 @@ export function RolePermissionMatrix() {
                       className="flex items-start gap-2 text-sm text-muted-foreground"
                     >
                       <X className="mt-0.5 size-4 shrink-0" />
-                      <span className="line-through">{label}</span>
+                      <span
+                        className={cn(
+                          "line-through",
+                          isDifferentPermission(permission) && "text-blue-600"
+                        )}
+                      >
+                        {label}
+                      </span>
                     </div>
                   ))}
                 </>

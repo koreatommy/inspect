@@ -7,7 +7,6 @@ import {
   History,
   Home,
   Settings,
-  ShieldCheck,
   UserCircle,
   Users,
 } from "lucide-react"
@@ -34,7 +33,7 @@ const navigationItems: NavItem[] = [
     icon: ClipboardCheck,
     requiredPermission: "inspection:create",
   },
-  { href: "/inspections/history", label: "점검이력", icon: History },
+  { href: "/inspections/history", label: "안전점검 이력", icon: History },
 ]
 
 function navLinkClass(active: boolean) {
@@ -64,10 +63,6 @@ export function SidebarNav({ role, onLinkClick }: SidebarNavProps) {
     hasPermission(role, "settings:account")
   const canUploadJson = hasPermission(role, "facility:upload")
   const canManageUsers = hasPermission(role, "user:manage")
-  const canManageInspectionHistory = hasPermission(
-    role,
-    "settings:inspection-history-manage"
-  )
   const settingsActive =
     pathname === "/settings" ||
     (pathname.startsWith("/settings/") &&
@@ -75,9 +70,6 @@ export function SidebarNav({ role, onLinkClick }: SidebarNavProps) {
   const uploadActive = pathname.startsWith("/admin/upload")
   const settingsAccountActive = pathname.startsWith("/settings/account")
   const settingsUsersActive = pathname.startsWith("/settings/users")
-  const inspectionHistoryAdminActive = pathname.startsWith(
-    "/settings/inspection-history"
-  )
 
   return (
     <>
@@ -126,7 +118,7 @@ export function SidebarNav({ role, onLinkClick }: SidebarNavProps) {
                 className={cn(navLinkClass(settingsAccountActive), "pl-10")}
               >
                 <UserCircle className="size-[18px] shrink-0" />
-                자기 정보
+                내정보 관리
               </Link>
             ) : null}
             {canUploadJson ? (
@@ -147,19 +139,6 @@ export function SidebarNav({ role, onLinkClick }: SidebarNavProps) {
               >
                 <Users className="size-[18px] shrink-0" />
                 사용자 관리
-              </Link>
-            ) : null}
-            {canManageInspectionHistory ? (
-              <Link
-                href="/settings/inspection-history"
-                onClick={onLinkClick}
-                className={cn(
-                  navLinkClass(inspectionHistoryAdminActive),
-                  "pl-10"
-                )}
-              >
-                <ShieldCheck className="size-[18px] shrink-0" />
-                점검이력 관리
               </Link>
             ) : null}
           </div>

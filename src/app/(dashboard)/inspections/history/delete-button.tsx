@@ -12,7 +12,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { deleteMonthlyInspection } from "./actions"
+
+import { deleteMonthlyInspectionFromHistory } from "./actions"
 
 export function DeleteInspectionButton({
   inspectionId,
@@ -47,7 +48,7 @@ export function DeleteInspectionButton({
           <Button variant="outline" onClick={() => setOpen(false)}>
             취소
           </Button>
-          <form action={deleteMonthlyInspection}>
+          <form action={deleteMonthlyInspectionFromHistory}>
             <input type="hidden" name="inspectionId" value={inspectionId} />
             <Button type="submit" variant="destructive">
               삭제
