@@ -34,6 +34,7 @@ export function SignaturePad({
       <div className="rounded-lg border bg-white p-2 dark:bg-gray-50">
         <SignatureCanvas
           ref={ref}
+          clearOnResize={false}
           penColor="#0a0a0a"
           minWidth={1.25}
           maxWidth={3}
