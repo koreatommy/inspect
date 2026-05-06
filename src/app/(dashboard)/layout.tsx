@@ -1,0 +1,24 @@
+import type { ReactNode } from "react"
+
+import { Header } from "@/components/layout/header"
+import { Sidebar } from "@/components/layout/sidebar"
+import { getCurrentRole, requireUser } from "@/lib/auth/helpers"
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: ReactNode
+}) {
+  const user = await requireUser()
+  const role = await getCurrentRole()
+
+  return (
+    <div className="min-h-dvh bg-muted/30 print:min-h-0 print:bg-white">
+      <Sidebar role={role} />
+      <div className="flex min-h-dvh flex-col lg:ml-64 print:ml-0 print:min-h-0">
+        <Header email={user.email ?? ""} role={role} />
+        <main className="flex-1 p-4 lg:p-6 print:p-0">{children}</main>
+      </div>
+    </div>
+  )
+}

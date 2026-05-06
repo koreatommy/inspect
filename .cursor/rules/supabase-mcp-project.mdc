@@ -1,0 +1,25 @@
+---
+description: Supabase MCP/CLI는 반드시 이 저장소(inspect)의 Supabase 프로젝트만 대상으로 할 것
+alwaysApply: true
+---
+
+# Supabase MCP·CLI — 프로젝트 연결 고정
+
+이 저장소(**inspect**)가 사용하는 Supabase **프로젝트 ref**는 아래와 같습니다. MCP·CLI·`execute_sql` 등으로 DB를 건드리기 **전에** 항상 동일한지 확인하세요.
+
+- **기대 ref:** `hliykvfxldohkxnizxpy`  
+  - 출처: 루트 `.env.local`의 `NEXT_PUBLIC_SUPABASE_URL` 호스트  
+    `https://<ref>.supabase.co` 에서 `<ref>`를 읽는다.
+- **교차 검증 (권장):**  
+  - Cursor **사용자** MCP 설정(`~/.cursor/mcp.json` 등)의 Supabase 항목 URL에 `project_ref=<ref>`가 있는지 확인한다.  
+  - `project_ref`가 위 ref와 **다르면** 이 저장소 DB가 **아니다**. 임의로 SQL을 실행하지 말고, 설정을 바로잡은 뒤 다시 시도한다.
+
+## 에이전트 동작 원칙
+
+1. Supabase MCP로 `execute_sql`·스키마 조회·데이터 변경을 하기 **직전**, 위 ref와 MCP URL의 `project_ref`가 **일치하는지** 확인한다.  
+2. 불일치이거나 확인 불가면, **다른 프로젝트로 추정**하고 MCP SQL을 실행하지 않는다. 사용자에게 MCP가 가리키는 ref를 확인·수정하도록 안내한다.  
+3. MCP가 꼬였을 때의 대안: 이 저장소의 `.env.local` + **서버 전용** 키로만 로컬에서 검증하거나, `npx supabase migration list --linked` 등 **링크된 프로젝트**가 inspect인지 확인한 뒤 진행한다.
+
+## 비밀
+
+- 규칙 본문에 **API 키·JWT·service_role 값을 적지 않는다.** ref와 URL 형태만 기준으로 삼는다.
