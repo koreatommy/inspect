@@ -130,7 +130,7 @@ export default async function NewInspectionPage({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">
+        <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
           월간 안전점검 시작
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -219,40 +219,64 @@ export default async function NewInspectionPage({
           )}
 
           <form action={createMonthlyInspection} className="space-y-4 border-t pt-6">
-            <div className="space-y-2">
-              <label htmlFor="facilityNo" className="text-sm font-medium">
-                시설
-              </label>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">시설 선택</legend>
               {facilities.length > 0 ? (
-                <select
-                  id="facilityNo"
-                  name="facilityNo"
-                  defaultValue={selectDefault}
-                  required
-                  className="h-10 w-full rounded-lg border border-input bg-background px-2.5 text-sm"
+                <ul
+                  role="radiogroup"
+                  aria-label="시설 선택"
+                  className="flex max-h-[60vh] flex-col gap-2 overflow-y-auto rounded-lg border bg-muted/20 p-2"
                 >
-                  <option value="">시설을 선택해 주세요</option>
                   {facilities.map((facility) => {
                     const facilityDrafts = draftsByFacility.get(
                       facility.facility_no
                     )
-                    const draftLabel = facilityDrafts
-                      ? ` [작성중: ${facilityDrafts.map((d) => d.inspection_month).join(", ")}]`
-                      : ""
+                    const isSelected = selectDefault === facility.facility_no
                     return (
-                      <option
-                        key={facility.facility_no}
-                        value={facility.facility_no}
-                      >
-                        {facility.facility_name} ({facility.facility_no})
-                        {facility.road_address
-                          ? ` — ${facility.road_address}`
-                          : ""}
-                        {draftLabel}
-                      </option>
+                      <li key={facility.facility_no}>
+                        <label
+                          className="flex cursor-pointer items-start gap-3 rounded-lg border bg-background p-3 transition-colors hover:bg-muted/60 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                        >
+                          <input
+                            type="radio"
+                            name="facilityNo"
+                            value={facility.facility_no}
+                            defaultChecked={isSelected}
+                            required
+                            className="mt-1 size-4 shrink-0 accent-primary"
+                          />
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex flex-wrap items-baseline gap-x-2">
+                              <p className="font-medium break-words">
+                                {facility.facility_name}
+                              </p>
+                              <span className="font-mono text-xs text-muted-foreground">
+                                {facility.facility_no}
+                              </span>
+                            </div>
+                            {facility.road_address ? (
+                              <p className="text-xs text-muted-foreground break-words">
+                                {facility.road_address}
+                              </p>
+                            ) : null}
+                            {facilityDrafts && facilityDrafts.length > 0 ? (
+                              <p className="flex flex-wrap items-center gap-1 text-xs">
+                                <Badge variant="outline" className="shrink-0">
+                                  작성중
+                                </Badge>
+                                <span className="text-muted-foreground">
+                                  {facilityDrafts
+                                    .map((d) => d.inspection_month)
+                                    .join(", ")}
+                                </span>
+                              </p>
+                            ) : null}
+                          </div>
+                        </label>
+                      </li>
                     )
                   })}
-                </select>
+                </ul>
               ) : (
                 <p className="rounded-lg border border-dashed bg-muted/40 px-3 py-6 text-center text-sm text-muted-foreground">
                   {directLookupMiss
@@ -262,7 +286,7 @@ export default async function NewInspectionPage({
                       : "검색 결과가 여기에 표시됩니다. 위에서 시설을 검색해 주세요."}
                 </p>
               )}
-            </div>
+            </fieldset>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <label

@@ -69,13 +69,16 @@ export default async function FacilitiesPage({
 
       <Card>
         <CardContent className="space-y-4 pt-4">
-          <form className="flex gap-2">
+          <form className="flex flex-col gap-2 sm:flex-row">
             <Input
               name="q"
               defaultValue={q}
               placeholder="시설번호, 시설명, 주소, 설치장소 검색"
+              className="flex-1"
             />
-            <Button type="submit">검색</Button>
+            <Button type="submit" className="sm:w-auto">
+              검색
+            </Button>
           </form>
 
           {(facilities ?? []).length > 0 ? (

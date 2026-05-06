@@ -41,11 +41,11 @@ export function MonthlyInspectionHistoryTab({
       <TableHeader>
         <TableRow>
           <TableHead>점검월</TableHead>
-          <TableHead>점검일</TableHead>
+          <TableHead className="hidden sm:table-cell">점검일</TableHead>
           <TableHead>상태</TableHead>
-          <TableHead>안전관리자</TableHead>
-          <TableHead>위탁점검자</TableHead>
-          <TableHead>완료일</TableHead>
+          <TableHead className="hidden md:table-cell">안전관리자</TableHead>
+          <TableHead className="hidden md:table-cell">위탁점검자</TableHead>
+          <TableHead className="hidden lg:table-cell">완료일</TableHead>
           <TableHead className="text-right">액션</TableHead>
         </TableRow>
       </TableHeader>
@@ -53,13 +53,17 @@ export function MonthlyInspectionHistoryTab({
         {inspections.map((inspection) => (
           <TableRow key={inspection.id}>
             <TableCell>{inspection.inspection_month}</TableCell>
-            <TableCell>{inspection.inspection_date}</TableCell>
+            <TableCell className="hidden sm:table-cell">
+              {inspection.inspection_date}
+            </TableCell>
             <TableCell>{statusLabel[inspection.status]}</TableCell>
-            <TableCell>{inspection.safety_manager_name ?? "-"}</TableCell>
-            <TableCell>
+            <TableCell className="hidden md:table-cell">
+              {inspection.safety_manager_name ?? "-"}
+            </TableCell>
+            <TableCell className="hidden md:table-cell">
               {inspection.consigned_inspector_name ?? "-"}
             </TableCell>
-            <TableCell>
+            <TableCell className="hidden lg:table-cell">
               {formatInspectionCompletedAt(inspection.completed_at)}
             </TableCell>
             <TableCell className="text-right">

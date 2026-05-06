@@ -70,7 +70,7 @@ export default async function InspectionPage({
         <p className="text-sm text-muted-foreground">
           {inspection.inspection_month} / {inspection.inspection_date}
         </p>
-        <h2 className="text-2xl font-semibold tracking-tight">
+        <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
           {facilityInfo?.facility_name ?? inspection.facility_no}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">

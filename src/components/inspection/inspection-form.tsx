@@ -122,14 +122,18 @@ export function InspectionForm({
       </Card>
 
       <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap gap-2">
+        <div className="grid gap-2 sm:flex sm:flex-wrap">
           {!isReadOnly && (
-            <Button type="submit" variant="outline">
+            <Button type="submit" variant="outline" className="w-full sm:w-auto">
               임시저장
             </Button>
           )}
           {canComplete && !isReadOnly && (
-            <Button type="submit" formAction={completeInspection}>
+            <Button
+              type="submit"
+              formAction={completeInspection}
+              className="w-full sm:w-auto"
+            >
               점검완료
             </Button>
           )}
@@ -138,13 +142,17 @@ export function InspectionForm({
               type="submit"
               variant="outline"
               formAction={saveInspectionDraftAndOpenLedger}
+              className="w-full sm:w-auto"
             >
               대장 미리보기
             </Button>
           ) : (
             <Link
               href={`/inspections/${inspection.id}/ledger`}
-              className={cn(buttonVariants({ variant: "outline" }))}
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "w-full sm:w-auto"
+              )}
             >
               대장 미리보기
             </Link>

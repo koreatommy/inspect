@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { LedgerMobileSummary } from "@/components/ledger/ledger-mobile-summary"
 import { LedgerTable, type LedgerDisplayRow } from "@/components/ledger/ledger-table"
 import { PrintButton } from "@/components/ledger/print-button"
 import { PrintLayout } from "@/components/ledger/print-layout"
@@ -133,8 +134,8 @@ export default async function LedgerPage({ params }: LedgerPageProps) {
   return (
     <div className="space-y-4 print:space-y-0">
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
             안전점검실시대장 미리보기
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -143,7 +144,7 @@ export default async function LedgerPage({ params }: LedgerPageProps) {
             표시합니다.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             href={`/inspections/${inspectionId}`}
             className={cn(buttonVariants({ variant: "outline" }))}
@@ -158,6 +159,8 @@ export default async function LedgerPage({ params }: LedgerPageProps) {
           />
         </div>
       </div>
+
+      <LedgerMobileSummary rowsByMonth={rowsByMonthSigned} />
 
       <PrintLayout>
         <div className="ledger-header-area shrink-0">

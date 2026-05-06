@@ -2,13 +2,16 @@ export function NoteInput({
   itemId,
   defaultValue,
   disabled = false,
+  inputId,
 }: {
   itemId: string
   defaultValue: string | null
   disabled?: boolean
+  inputId?: string
 }) {
   return (
     <textarea
+      id={inputId}
       name={`note:${itemId}`}
       defaultValue={defaultValue ?? ""}
       disabled={disabled}

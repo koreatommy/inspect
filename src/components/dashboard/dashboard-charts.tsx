@@ -93,8 +93,8 @@ export function StatusDonutChart({ data }: { data: StatusData[] }) {
         <CardTitle className="text-base">이번 달 점검 상태</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center justify-center gap-6">
-          <div className="h-[200px] w-[200px]">
+        <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
+          <div className="h-[200px] w-[200px] shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -124,7 +124,7 @@ export function StatusDonutChart({ data }: { data: StatusData[] }) {
             </ResponsiveContainer>
           </div>
 
-          <div className="space-y-3">
+          <div className="w-full space-y-3 sm:w-auto">
             {data.map((entry) => (
               <div key={entry.name} className="flex items-center gap-2">
                 <div
@@ -137,9 +137,11 @@ export function StatusDonutChart({ data }: { data: StatusData[] }) {
                 </span>
               </div>
             ))}
-            <div className="border-t pt-2">
+            <div className="flex items-center border-t pt-2">
               <span className="text-sm text-muted-foreground">합계</span>
-              <span className="ml-auto text-sm font-semibold tabular-nums"> {total}</span>
+              <span className="ml-auto text-sm font-semibold tabular-nums">
+                {total}
+              </span>
             </div>
           </div>
         </div>

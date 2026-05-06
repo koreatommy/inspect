@@ -40,7 +40,7 @@ export function SignaturePad({
           maxWidth={3}
           velocityFilterWeight={0.85}
           canvasProps={{
-            className: "h-32 w-full rounded-md touch-none",
+            className: "h-40 w-full rounded-md touch-none sm:h-32",
           }}
           onEnd={() => {
             const canvas = ref.current
