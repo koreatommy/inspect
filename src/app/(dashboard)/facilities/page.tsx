@@ -42,6 +42,10 @@ export default async function FacilitiesPage({
             </Button>
           </form>
 
+          <p className="md:hidden text-center text-xs text-muted-foreground">
+            가로모드 변경 또는 좌우 스크롤 해보세요
+          </p>
+
           <Suspense key={`${q}-${currentPage}`} fallback={<FacilitiesTableSkeleton />}>
             <FacilitiesTable q={q} currentPage={currentPage} />
           </Suspense>
