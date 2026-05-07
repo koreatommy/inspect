@@ -98,9 +98,7 @@ export async function FacilitiesTable({ q, currentPage }: FacilitiesTableProps) 
             <TableHead>시설명</TableHead>
             <TableHead className="hidden md:table-cell">주소</TableHead>
             <TableHead className="hidden sm:table-cell">설치장소</TableHead>
-            <TableHead className="hidden sm:table-cell">
-              월별점검 현황 ({currentMonth})
-            </TableHead>
+            <TableHead>월별점검 현황 ({currentMonth})</TableHead>
             <TableHead>액션</TableHead>
           </TableRow>
         </TableHeader>
@@ -124,7 +122,7 @@ export async function FacilitiesTable({ q, currentPage }: FacilitiesTableProps) 
                 <TableCell className="hidden sm:table-cell">
                   {facility.install_place_name ?? "-"}
                 </TableCell>
-                <TableCell className="hidden sm:table-cell">
+                <TableCell>
                   <span
                     className={cn(
                       "font-medium",
