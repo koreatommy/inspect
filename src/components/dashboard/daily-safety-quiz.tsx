@@ -131,15 +131,20 @@ function ConfettiBurst() {
 }
 
 export function DailySafetyQuiz({ question, className }: DailySafetyQuizProps) {
+  return (
+    <DailySafetyQuizBody
+      key={question.id}
+      question={question}
+      className={className}
+    />
+  )
+}
+
+function DailySafetyQuizBody({ question, className }: DailySafetyQuizProps) {
   const statementId = useId()
   const resultSummaryRef = useRef<HTMLParagraphElement>(null)
   const [chosen, setChosen] = useState<OxAnswer | null>(null)
   const [showConfetti, setShowConfetti] = useState(false)
-
-  useEffect(() => {
-    setChosen(null)
-    setShowConfetti(false)
-  }, [question.id])
 
   useEffect(() => {
     if (chosen !== null) {
@@ -150,12 +155,13 @@ export function DailySafetyQuiz({ question, className }: DailySafetyQuizProps) {
   const answered = chosen !== null
   const isCorrect = answered && chosen === question.answer
 
-  useEffect(() => {
-    if (!isCorrect) return
-    setShowConfetti(true)
-    const timer = window.setTimeout(() => setShowConfetti(false), 3300)
-    return () => window.clearTimeout(timer)
-  }, [isCorrect])
+  function handleAnswer(value: OxAnswer) {
+    setChosen(value)
+    if (value === question.answer) {
+      setShowConfetti(true)
+      window.setTimeout(() => setShowConfetti(false), 3300)
+    }
+  }
 
   return (
     <div
@@ -191,7 +197,7 @@ export function DailySafetyQuiz({ question, className }: DailySafetyQuizProps) {
             )}
             aria-describedby={statementId}
             aria-label={value === "O" ? "맞다(O)" : "틀리다(X)"}
-            onClick={() => setChosen(value)}
+            onClick={() => handleAnswer(value)}
             aria-pressed={chosen === value}
           >
             {value}

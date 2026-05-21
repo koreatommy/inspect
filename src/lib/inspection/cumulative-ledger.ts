@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import type { LedgerDisplayRow } from "@/components/ledger/ledger-table"
+import { omitRenderedAt } from "@/lib/inspection/ledger-display"
 import { buildLedgerRow } from "@/lib/inspection/snapshot"
 import type {
   Database,
@@ -47,11 +48,6 @@ function resolveLedgerYearEndMonth(inspection: MonthlyInspectionRow): {
 
 function monthKey(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, "0")}`
-}
-
-function ledgerToDisplay(row: LedgerRow): LedgerDisplayRow {
-  const { rendered_at: _omit, ...rest } = row
-  return rest
 }
 
 function groupItemsByInspectionId(
@@ -150,13 +146,13 @@ export async function loadCumulativeLedgerRowsByMonth(
 
     const ledger = ledgerByInspectionId.get(insp.id)
     if (ledger) {
-      rowsByMonth.set(mo, ledgerToDisplay(ledger))
+      rowsByMonth.set(mo, omitRenderedAt(ledger))
       continue
     }
 
     if (insp.id === args.anchorInspectionId) {
       if (args.anchorStoredLedger) {
-        rowsByMonth.set(mo, ledgerToDisplay(args.anchorStoredLedger))
+        rowsByMonth.set(mo, omitRenderedAt(args.anchorStoredLedger))
       } else {
         rowsByMonth.set(
           mo,

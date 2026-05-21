@@ -121,17 +121,23 @@ export function WeatherWidget({ className }: { className?: string }) {
   }, [])
 
   useEffect(() => {
+    const scheduleLoad = (lat: number, lon: number, usedGeolocation: boolean) => {
+      queueMicrotask(() => {
+        void load(lat, lon, usedGeolocation)
+      })
+    }
+
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      void load(SEOUL_LAT, SEOUL_LON, false)
+      scheduleLoad(SEOUL_LAT, SEOUL_LON, false)
       return
     }
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        void load(pos.coords.latitude, pos.coords.longitude, true)
+        scheduleLoad(pos.coords.latitude, pos.coords.longitude, true)
       },
       () => {
-        void load(SEOUL_LAT, SEOUL_LON, false)
+        scheduleLoad(SEOUL_LAT, SEOUL_LON, false)
       },
       { enableHighAccuracy: false, maximumAge: 300_000, timeout: 12_000 }
     )

@@ -9,10 +9,10 @@ import { PrintButton } from "@/components/ledger/print-button"
 import { PrintLayout } from "@/components/ledger/print-layout"
 import { buttonVariants } from "@/components/ui/button"
 import { loadCumulativeLedgerRowsByMonth } from "@/lib/inspection/cumulative-ledger"
+import { omitRenderedAt } from "@/lib/inspection/ledger-display"
 import { ledgerPrintDocumentTitle } from "@/lib/inspection/ledger-print-title"
 import { buildLedgerRow } from "@/lib/inspection/snapshot"
 import { createClient } from "@/lib/supabase/server"
-import type { LedgerRow } from "@/types/database"
 import { cn } from "@/lib/utils"
 
 type LedgerPageProps = {
@@ -32,11 +32,6 @@ async function getSignedUrl(path: string | null | undefined) {
     .createSignedUrl(path, 60 * 10)
 
   return data?.signedUrl ?? null
-}
-
-function ledgerRowToDisplay(row: LedgerRow): LedgerDisplayRow {
-  const { rendered_at: _omit, ...rest } = row
-  return rest
 }
 
 export default async function LedgerPage({ params }: LedgerPageProps) {
@@ -126,7 +121,7 @@ export default async function LedgerPage({ params }: LedgerPageProps) {
     rowsByMonthSigned.get(endMonth) ??
     attachSignatureUrls(
       storedLedger
-        ? ledgerRowToDisplay(storedLedger)
+        ? omitRenderedAt(storedLedger)
         : buildLedgerRow({
             inspection,
             facility,

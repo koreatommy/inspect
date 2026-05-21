@@ -3,7 +3,6 @@
  * MCP agent-tools 파일에서 JSON 추출 후 SQL INSERT 생성
  */
 import { readFileSync, writeFileSync } from "fs"
-import { execSync } from "child_process"
 import path from "path"
 
 const TOOLS_DIR =
