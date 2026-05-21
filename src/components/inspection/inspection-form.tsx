@@ -9,6 +9,11 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { hasPermission } from "@/lib/auth/permissions"
+import {
+  PERSON_NAME_HTML_PATTERN,
+  PERSON_NAME_MAX_LENGTH,
+  PERSON_NAME_MIN_LENGTH,
+} from "@/lib/inspection/person-name"
 import { cn } from "@/lib/utils"
 import type {
   MonthlyInspectionItemRow,
@@ -70,7 +75,15 @@ export function InspectionForm({
                 name="safetyManagerName"
                 defaultValue={inspection.safety_manager_name ?? ""}
                 disabled={!canSignSafetyManager || isReadOnly}
+                minLength={PERSON_NAME_MIN_LENGTH}
+                maxLength={PERSON_NAME_MAX_LENGTH}
+                pattern={PERSON_NAME_HTML_PATTERN}
+                title="한글 또는 영문 이름만 입력할 수 있습니다 (2~30자)."
+                autoComplete="name"
               />
+              <p className="text-xs text-muted-foreground">
+                한글·영문 이름만 입력 (2~30자, 숫자·기호 불가)
+              </p>
             </div>
             <div className="space-y-2">
               <label
@@ -84,7 +97,15 @@ export function InspectionForm({
                 name="consignedInspectorName"
                 defaultValue={inspection.consigned_inspector_name ?? ""}
                 disabled={!canSignConsignedInspector || isReadOnly}
+                minLength={PERSON_NAME_MIN_LENGTH}
+                maxLength={PERSON_NAME_MAX_LENGTH}
+                pattern={PERSON_NAME_HTML_PATTERN}
+                title="한글 또는 영문 이름만 입력할 수 있습니다 (2~30자)."
+                autoComplete="name"
               />
+              <p className="text-xs text-muted-foreground">
+                한글·영문 이름만 입력 (2~30자, 숫자·기호 불가)
+              </p>
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">

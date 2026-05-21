@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache"
 
 import { getCurrentRole, getCurrentUser, hasRole } from "@/lib/auth/helpers"
+import { getPersonNameValidationError } from "@/lib/inspection/person-name"
 import { getServiceRoleClient } from "@/lib/supabase/admin"
+import {
+  getKoreanMobilePhoneValidationError,
+  normalizeKoreanMobilePhone,
+} from "@/lib/validation/korean-phone"
 import { resolveElevatedSupabaseKey } from "@/lib/supabase/service-key"
 import { createClient } from "@/lib/supabase/server"
 import type { AppRole } from "@/types/inspection"
@@ -63,6 +68,8 @@ export async function createUserAction(
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase()
+  const displayName = String(formData.get("displayName") ?? "").trim()
+  const phoneRaw = String(formData.get("phone") ?? "").trim()
   const password = String(formData.get("password") ?? "")
   const passwordConfirm = String(formData.get("passwordConfirm") ?? "")
   const role = String(formData.get("role") ?? "").trim() as AppRole
@@ -70,6 +77,21 @@ export async function createUserAction(
   if (!email) {
     return { error: "이메일(아이디)을 입력해 주세요." }
   }
+
+  const nameError = getPersonNameValidationError(displayName, "이름")
+  if (!displayName) {
+    return { error: "이름을 입력해 주세요." }
+  }
+  if (nameError) {
+    return { error: nameError }
+  }
+
+  const phoneError = getKoreanMobilePhoneValidationError(phoneRaw)
+  if (phoneError) {
+    return { error: phoneError }
+  }
+
+  const phone = normalizeKoreanMobilePhone(phoneRaw)
 
   if (!email.includes("@")) {
     return { error: "로그인 아이디는 이메일 주소 형식이어야 합니다." }
@@ -87,15 +109,34 @@ export async function createUserAction(
     return { error: "선택한 역할로는 계정을 만들 수 없습니다." }
   }
 
-  const { error } = await adminClient.auth.admin.createUser({
+  const { data: created, error } = await adminClient.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
     app_metadata: { inspection_role: role },
+    user_metadata: {
+      display_name: displayName,
+      phone,
+    },
   })
 
   if (error) {
     return { error: mapCreateUserError(error.message) }
+  }
+
+  const userId = created.user?.id
+  if (userId) {
+    const { error: profileError } = await adminClient
+      .from("inspection_user_roles")
+      .update({ display_name: displayName, phone })
+      .eq("user_id", userId)
+
+    if (profileError) {
+      return {
+        error:
+          "계정은 생성되었으나 이름·연락처 저장에 실패했습니다. DB 마이그레이션이 적용되었는지 확인해 주세요.",
+      }
+    }
   }
 
   revalidatePath("/settings")

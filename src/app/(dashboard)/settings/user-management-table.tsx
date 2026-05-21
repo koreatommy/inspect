@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ROLE_LABELS } from "@/lib/auth/permissions"
+import { formatKoreanMobilePhone } from "@/lib/validation/korean-phone"
 import type { AppRole } from "@/types/inspection"
 
 import { updateUserRoleAction, type UpdateRoleState } from "./user-actions"
@@ -31,6 +32,8 @@ type UserRow = {
   user_id: string
   role: string
   email: string | null
+  display_name: string | null
+  phone: string | null
 }
 
 function RoleChangeRow({ user }: { user: UserRow }) {
@@ -47,6 +50,10 @@ function RoleChangeRow({ user }: { user: UserRow }) {
     <TableRow>
       <TableCell className="font-mono text-xs">
         {user.email ?? user.user_id}
+      </TableCell>
+      <TableCell>{user.display_name ?? "-"}</TableCell>
+      <TableCell className="text-sm tabular-nums">
+        {user.phone ? formatKoreanMobilePhone(user.phone) : "-"}
       </TableCell>
       <TableCell>
         <Badge
@@ -102,6 +109,8 @@ export function UserManagementTable({ users }: { users: UserRow[] }) {
       <TableHeader>
         <TableRow>
           <TableHead>아이디(이메일)</TableHead>
+          <TableHead>이름</TableHead>
+          <TableHead>핸드폰</TableHead>
           <TableHead>현재 역할</TableHead>
           <TableHead>역할 변경</TableHead>
         </TableRow>

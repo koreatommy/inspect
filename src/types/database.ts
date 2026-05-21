@@ -199,6 +199,8 @@ export type Database = {
       inspection_user_roles: TableDefinition<{
         user_id: string
         role: "ADMIN" | "MANAGER" | "INSPECTOR" | "VIEWER"
+        display_name: string | null
+        phone: string | null
         created_at: string
         updated_at: string
       }>

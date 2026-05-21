@@ -1,3 +1,4 @@
+import { getPersonNameValidationError } from "@/lib/inspection/person-name"
 import type { MonthlyInspectionItemRow, MonthlyInspectionRow } from "@/types/database"
 
 export function validateCompletion(
@@ -16,8 +17,25 @@ export function validateCompletion(
     }
   }
 
-  if (!inspection.safety_manager_name?.trim()) {
+  const safetyManagerName = inspection.safety_manager_name?.trim() ?? ""
+  if (!safetyManagerName) {
     errors.push("안전관리자명을 입력해 주세요.")
+  } else {
+    const nameError = getPersonNameValidationError(
+      safetyManagerName,
+      "안전관리자명"
+    )
+    if (nameError) errors.push(nameError)
+  }
+
+  const consignedInspectorName =
+    inspection.consigned_inspector_name?.trim() ?? ""
+  if (consignedInspectorName) {
+    const nameError = getPersonNameValidationError(
+      consignedInspectorName,
+      "위탁점검자명"
+    )
+    if (nameError) errors.push(nameError)
   }
 
   if (!inspection.safety_manager_signature_url) {

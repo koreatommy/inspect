@@ -18,6 +18,8 @@ export default async function SettingsUsersPage() {
     user_id: string
     role: string
     email: string | null
+    display_name: string | null
+    phone: string | null
   }> = []
 
   let missingServiceRole = false

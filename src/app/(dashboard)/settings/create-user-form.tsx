@@ -5,6 +5,11 @@ import { useActionState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ROLE_LABELS } from "@/lib/auth/permissions"
+import {
+  PERSON_NAME_HTML_PATTERN,
+  PERSON_NAME_MAX_LENGTH,
+  PERSON_NAME_MIN_LENGTH,
+} from "@/lib/inspection/person-name"
 import type { AppRole } from "@/types/inspection"
 
 import {
@@ -37,6 +42,37 @@ export function CreateUserForm() {
               type="email"
               autoComplete="off"
               placeholder="user@example.com"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="new-user-display-name" className="text-sm font-medium">
+              이름
+            </label>
+            <Input
+              id="new-user-display-name"
+              name="displayName"
+              autoComplete="name"
+              minLength={PERSON_NAME_MIN_LENGTH}
+              maxLength={PERSON_NAME_MAX_LENGTH}
+              pattern={PERSON_NAME_HTML_PATTERN}
+              title="한글 또는 영문 이름만 입력할 수 있습니다 (2~30자)."
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="new-user-phone" className="text-sm font-medium">
+              핸드폰 번호
+            </label>
+            <Input
+              id="new-user-phone"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              inputMode="tel"
+              placeholder="010-1234-5678"
+              pattern="01[0-9]-?[0-9]{3,4}-?[0-9]{4}"
+              title="휴대전화 번호 형식 (예: 010-1234-5678)"
               required
             />
           </div>

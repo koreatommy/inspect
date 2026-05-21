@@ -8,6 +8,8 @@ export type AdminUserRow = {
   user_id: string
   role: AppRole
   email: string | null
+  display_name: string | null
+  phone: string | null
 }
 
 /**
@@ -43,7 +45,7 @@ export async function loadAdminUserDirectory(
 
   const { data: roleRows, error: rolesError } = await adminClient
     .from("inspection_user_roles")
-    .select("user_id, role")
+    .select("user_id, role, display_name, phone")
 
   if (rolesError) {
     return {
@@ -52,15 +54,27 @@ export async function loadAdminUserDirectory(
     }
   }
 
-  const roleMap = new Map(
-    (roleRows ?? []).map((r) => [r.user_id, r.role as AppRole])
+  const profileMap = new Map(
+    (roleRows ?? []).map((r) => [
+      r.user_id,
+      {
+        role: r.role as AppRole,
+        display_name: r.display_name ?? null,
+        phone: r.phone ?? null,
+      },
+    ])
   )
 
-  const users: AdminUserRow[] = authUsers.map((u) => ({
-    user_id: u.id,
-    email: u.email ?? null,
-    role: roleMap.get(u.id) ?? "VIEWER",
-  }))
+  const users: AdminUserRow[] = authUsers.map((u) => {
+    const profile = profileMap.get(u.id)
+    return {
+      user_id: u.id,
+      email: u.email ?? null,
+      role: profile?.role ?? "VIEWER",
+      display_name: profile?.display_name ?? null,
+      phone: profile?.phone ?? null,
+    }
+  })
 
   users.sort((a, b) =>
     (a.email ?? a.user_id).localeCompare(b.email ?? b.user_id, "ko")

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation"
 import { getCurrentRole, hasRole } from "@/lib/auth/helpers"
 import { hasPermission } from "@/lib/auth/permissions"
 import { validateCompletion } from "@/lib/inspection/complete"
+import { getPersonNameValidationError } from "@/lib/inspection/person-name"
 import { refreshLedgerSnapshotForInspection } from "@/lib/inspection/refresh-ledger-snapshot"
 import { buildLedgerRow } from "@/lib/inspection/snapshot"
 import { createClient } from "@/lib/supabase/server"
@@ -154,6 +155,30 @@ async function executeInspectionDraftSave(formData: FormData) {
     role,
     "inspection:sign-consigned-inspector"
   )
+
+  if (canSignSafety && safetyManagerName) {
+    const nameError = getPersonNameValidationError(
+      safetyManagerName,
+      "안전관리자명"
+    )
+    if (nameError) {
+      redirect(
+        `/inspections/${inspectionId}?error=${encodeURIComponent(nameError)}`
+      )
+    }
+  }
+
+  if (canSignConsigned && consignedInspectorName) {
+    const nameError = getPersonNameValidationError(
+      consignedInspectorName,
+      "위탁점검자명"
+    )
+    if (nameError) {
+      redirect(
+        `/inspections/${inspectionId}?error=${encodeURIComponent(nameError)}`
+      )
+    }
+  }
 
   const safetySignaturePath = canSignSafety
     ? await uploadSignature(
