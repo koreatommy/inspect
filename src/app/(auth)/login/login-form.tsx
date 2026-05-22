@@ -1,12 +1,13 @@
 "use client"
 
-import { AnimatePresence, motion } from "framer-motion"
-import { Lock, User } from "lucide-react"
-import { useState, type FormEvent } from "react"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
+import { Eye, EyeOff, Lock, User } from "lucide-react"
+import { useEffect, useRef, useState, type FormEvent } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { getSafeRedirectPath } from "@/lib/auth/safe-redirect"
 import { createClient } from "@/lib/supabase/client"
 
 function normalizeLoginIdentifier(identifier: string) {
@@ -16,11 +17,32 @@ function normalizeLoginIdentifier(identifier: string) {
   return `${trimmed}@inspect.local`
 }
 
-export function LoginForm() {
+interface LoginFormProps {
+  redirectedFrom?: string | null
+  autoFocus?: boolean
+}
+
+export function LoginForm({
+  redirectedFrom: redirectedFromProp,
+  autoFocus = false,
+}: LoginFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const identifierRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const prefersReducedMotion = useReducedMotion()
+
+  const redirectedFrom =
+    redirectedFromProp ?? searchParams.get("redirectedFrom")
+
+  useEffect(() => {
+    if (autoFocus) {
+      const id = window.setTimeout(() => identifierRef.current?.focus(), 100)
+      return () => window.clearTimeout(id)
+    }
+  }, [autoFocus])
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -53,9 +75,7 @@ export function LoginForm() {
         )
       } else if (/invalid login credentials/i.test(msg)) {
         console.warn("[Login] signInWithPassword: invalid credentials")
-        setError(
-          "아이디(이메일) 또는 비밀번호가 일치하지 않습니다.",
-        )
+        setError("아이디(이메일) 또는 비밀번호가 일치하지 않습니다.")
       } else {
         console.error("[Login] Auth error:", msg)
         setError("로그인 정보가 올바르지 않습니다.")
@@ -64,51 +84,75 @@ export function LoginForm() {
       return
     }
 
-    const redirectTo = searchParams.get("redirectedFrom") || "/"
+    let redirectTo = getSafeRedirectPath(redirectedFrom)
+    if (!redirectedFrom || redirectTo === "/") {
+      redirectTo = "/dashboard"
+    }
     router.push(redirectTo)
     router.refresh()
   }
 
+  const motionProps = prefersReducedMotion
+    ? { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0 } }
+    : {
+        initial: { opacity: 0, y: 12 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.3 },
+      }
+
   return (
-    <motion.form
-      onSubmit={handleSubmit}
-      className="space-y-4"
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <div className="space-y-2">
-        <label htmlFor="identifier" className="text-sm font-medium">
+    <motion.form onSubmit={handleSubmit} className="space-y-6" {...motionProps}>
+      <div className="space-y-3">
+        <label
+          htmlFor="identifier"
+          className="block text-sm font-medium leading-snug text-label-strong"
+        >
           아이디 또는 이메일
         </label>
         <div className="relative">
-          <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <User className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            ref={identifierRef}
             id="identifier"
             name="identifier"
             type="text"
             autoComplete="username"
             required
             placeholder="admin 또는 admin@inspect.local"
-            className="pl-10"
+            className="h-11 px-3 pl-11 text-base"
           />
         </div>
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="password" className="text-sm font-medium">
+      <div className="space-y-3">
+        <label
+          htmlFor="password"
+          className="block text-sm font-medium leading-snug text-label-strong"
+        >
           비밀번호
         </label>
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Lock className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="password"
             name="password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             required
-            className="pl-10"
+            className="h-11 px-3 pr-11 pl-11 text-base"
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+          >
+            {showPassword ? (
+              <EyeOff className="size-4" />
+            ) : (
+              <Eye className="size-4" />
+            )}
+          </button>
         </div>
       </div>
 
@@ -116,9 +160,10 @@ export function LoginForm() {
         {error ? (
           <motion.p
             key="error"
-            initial={{ opacity: 0, height: 0 }}
+            role="alert"
+            initial={prefersReducedMotion ? false : { opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0, height: 0 }}
             className="overflow-hidden rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
           >
             {error}
@@ -126,7 +171,11 @@ export function LoginForm() {
         ) : null}
       </AnimatePresence>
 
-      <Button type="submit" className="w-full" disabled={isPending}>
+      <Button
+        type="submit"
+        className="mt-2 h-11 w-full bg-[#F97316] text-base text-white hover:bg-[#EA580C]"
+        disabled={isPending}
+      >
         {isPending ? "로그인 중..." : "로그인"}
       </Button>
     </motion.form>

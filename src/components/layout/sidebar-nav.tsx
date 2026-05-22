@@ -25,7 +25,7 @@ type NavItem = {
 }
 
 const navigationItems: NavItem[] = [
-  { href: "/", label: "대시보드", icon: Home },
+  { href: "/dashboard", label: "대시보드", icon: Home },
   { href: "/facilities", label: "시설 목록", icon: Building2 },
   {
     href: "/inspections/new",
@@ -86,7 +86,9 @@ export function SidebarNav({ role, onLinkClick }: SidebarNavProps) {
         {visibleItems.map((item) => {
           const Icon = item.icon
           const isActive =
-            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
+            item.href === "/dashboard"
+              ? pathname === "/dashboard"
+              : pathname.startsWith(item.href)
 
           return (
             <Link

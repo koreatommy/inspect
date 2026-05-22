@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import type { Database } from "@/types/database"
 import { getSupabaseEnv } from "./env"
 
-const publicRoutes = ["/login", "/auth/callback"]
+const publicRoutes = ["/", "/login", "/auth/callback"]
 
 function isPublicRoute(pathname: string) {
   return publicRoutes.some(
@@ -52,9 +52,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  if (user && pathname === "/login") {
+  if (user && (pathname === "/login" || pathname === "/")) {
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = "/"
+    redirectUrl.pathname = "/dashboard"
     redirectUrl.search = ""
     return NextResponse.redirect(redirectUrl)
   }

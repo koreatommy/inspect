@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>놀이지킴 — 어린이놀이시설 안전점검 SaaS</title>
+<meta name="description" content="월 1회 안전점검, 법적 의무사항 확인, 점검대장 작성, 디지털 서명, PDF 보고서까지. 어린이놀이시설 안전관리를 하나의 플랫폼에서 처리하세요." />
+
+<link rel="stylesheet" href="wds/colors_and_type.css" />
+
+<style>
+  :root {
+    --page-bg: #FBFCFE;
+    --page-fg: dark;
+  }
+  html, body {
+    background: var(--page-bg);
+    transition: background 700ms cubic-bezier(.2,.7,.2,1);
+  }
+  body {
+    font-family: var(--font-sans);
+    color: var(--semantic-label-normal);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  * { box-sizing: border-box; }
+  a { color: inherit; }
+  button { font-family: var(--font-sans); }
+
+  /* Custom range input look — matches design system */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: var(--semantic-line-solid-normal);
+    border-radius: 999px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px; height: 24px;
+    background: #fff;
+    border: 2px solid var(--semantic-primary-normal);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 30, 80, .15);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px; height: 22px;
+    background: #fff;
+    border: 2px solid var(--semantic-primary-normal);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 12px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(112,115,124,.20);
+    border-radius: 99px;
+    border: 3px solid var(--page-bg);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(112,115,124,.35); }
+
+  /* Disable transitions while reduced-motion mode */
+  .no-scroll-fx [style*="transition"] { transition: none !important; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+
+  /* Responsive tweaks */
+  @media (max-width: 980px) {
+    main > section > div[style*="grid-template-columns"] {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="src/utils.jsx"></script>
+<script type="text/babel" src="src/Icon.jsx"></script>
+<script type="text/babel" src="src/Nav.jsx"></script>
+<script type="text/babel" src="src/HeroVideo.jsx"></script>
+<script type="text/babel" src="src/Hero.jsx"></script>
+<script type="text/babel" src="src/TrustStrip.jsx"></script>
+<script type="text/babel" src="src/Problem.jsx"></script>
+<script type="text/babel" src="src/CoreValue.jsx"></script>
+<script type="text/babel" src="src/Features.jsx"></script>
+<script type="text/babel" src="src/Customers.jsx"></script>
+<script type="text/babel" src="src/Pricing.jsx"></script>
+<script type="text/babel" src="src/Calculator.jsx"></script>
+<script type="text/babel" src="src/Comparison.jsx"></script>
+<script type="text/babel" src="src/FAQ.jsx"></script>
+<script type="text/babel" src="src/FinalCTA.jsx"></script>
+<script type="text/babel" src="src/app.jsx"></script>
+</body>
+</html>

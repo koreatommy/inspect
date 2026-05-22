@@ -6,7 +6,7 @@ import { QuickActions } from "@/components/dashboard/quick-actions"
 import { getCurrentUser } from "@/lib/auth/helpers"
 import { getDailySafetyQuiz } from "@/lib/quiz/get-daily-quiz"
 
-import { DashboardContent, DashboardContentSkeleton } from "./dashboard-content"
+import { DashboardContent, DashboardContentSkeleton } from "../dashboard-content"
 
 function getGreeting() {
   const hour = new Date().getHours()
