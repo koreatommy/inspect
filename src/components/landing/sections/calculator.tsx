@@ -187,6 +187,9 @@ export function Calculator() {
                 도입 상담 신청
                 <ArrowRight className="size-4" />
               </button>
+              <p className="mt-3 text-center text-[11px] font-medium text-brand">
+                V.A.T(부가세)별도
+              </p>
             </div>
           </div>
         </Reveal>

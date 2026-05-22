@@ -1,0 +1,29 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=IBM+Plex+Sans+KR:wght@500;600&family=Gowun+Batang:wght@700&family=Gothic+A1:wght@700;800&family=Montserrat:wght@600;700&family=Jua&family=Do+Hyeon&display=swap");
+
+.trust-font-seoul {
+  font-family: "Noto Serif KR", var(--font-pretendard), serif;
+}
+
+.trust-font-gangnam {
+  font-family: "IBM Plex Sans KR", var(--font-pretendard), sans-serif;
+}
+
+.trust-font-gyeonggi {
+  font-family: "Gowun Batang", var(--font-pretendard), serif;
+}
+
+.trust-font-playground {
+  font-family: "Gothic A1", var(--font-pretendard), sans-serif;
+}
+
+.trust-font-sk {
+  font-family: Montserrat, var(--font-pretendard), sans-serif;
+}
+
+.trust-font-lotte {
+  font-family: Jua, var(--font-pretendard), sans-serif;
+}
+
+.trust-font-parks {
+  font-family: "Do Hyeon", var(--font-pretendard), sans-serif;
+}

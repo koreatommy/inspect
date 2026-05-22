@@ -431,6 +431,57 @@ html:has(.landing-page) body {
   }
 }
 
+/* TrustStrip — 기관 마키 & 호버 */
+@keyframes trustStripMarquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.trust-strip-marquee-animate {
+  animation: trustStripMarquee 42s linear infinite;
+}
+
+.trust-strip-marquee:hover .trust-strip-marquee-animate {
+  animation-play-state: paused;
+}
+
+.trust-strip-org {
+  opacity: 0.52;
+}
+
+.trust-strip-marquee:hover .trust-strip-org,
+.trust-strip-org:hover {
+  opacity: 1;
+}
+
+.trust-strip-marquee-fade-left {
+  background: linear-gradient(
+    90deg,
+    #f4f6fa 0%,
+    #f4f6fa 35%,
+    transparent 100%
+  );
+}
+
+.trust-strip-marquee-fade-right {
+  background: linear-gradient(
+    270deg,
+    #f4f6fa 0%,
+    #f4f6fa 35%,
+    transparent 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trust-strip-marquee-animate {
+    animation: none;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
