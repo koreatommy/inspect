@@ -15,7 +15,7 @@ const orgMarkVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.45, ease: [0.2, 0.7, 0.2, 1] },
+    transition: { duration: 0.45, ease: [0.2, 0.7, 0.2, 1] as const },
   },
 }
 

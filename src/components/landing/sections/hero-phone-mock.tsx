@@ -217,7 +217,6 @@ export function HeroPhoneMock() {
                     key={"src" in cell ? cell.src : i}
                     className="relative aspect-square overflow-hidden rounded-[10px] transition-all duration-[420ms] ease-out"
                     style={{
-                      background: "bg" in cell ? cell.bg : undefined,
                       opacity: stage === 1 ? 1 : 0,
                       transform: stage === 1 ? "scale(1)" : "scale(.94)",
                       transitionDelay: `${i * 100}ms`,
