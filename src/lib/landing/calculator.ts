@@ -25,7 +25,7 @@ const PLAN_HINTS: Record<Exclude<PlanId, "custom">, string> = {
 
 export function calcUnitFee(
   facilityCount: number,
-  tiers: PricingTier[]
+  tiers: readonly PricingTier[]
 ): number {
   let total = 0
   let remaining = facilityCount

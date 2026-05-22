@@ -55,14 +55,9 @@ function PlanCard({ plan }: { plan: (typeof COPY.pricing.plans)[number] }) {
     ? "transparent"
     : "var(--semantic-line-normal-alternative)"
 
-  const unitTierText =
-    plan.tiers.length === 1
-      ? `1~${plan.tiers[0].to}개소 · 개소당 ${formatKRW(plan.tiers[0].unitPrice)}원`
-      : plan.tiers
-          .map(
-            (t) => `${t.from}~${t.to}개소 ${formatKRW(t.unitPrice)}원`
-          )
-          .join(" · ")
+  const unitTierText = plan.tiers
+    .map((t) => `${t.from}~${t.to}개소 ${formatKRW(t.unitPrice)}원`)
+    .join(" · ")
 
   return (
     <div
