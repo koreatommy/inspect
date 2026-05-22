@@ -6,6 +6,8 @@ import { ArrowRight, Play, ShieldCheck, FileText, Bell } from "lucide-react"
 
 import { Reveal } from "../motion/reveal"
 import { HeroPhoneMock } from "./hero-phone-mock"
+import { HeroHighlighter } from "./hero-highlight"
+import { HeroRotatingSubtitle } from "./hero-rotating-subtitle"
 
 interface HeroProps {
   onPrimaryClick: () => void
@@ -102,17 +104,14 @@ export function Hero({ onPrimaryClick, onSecondaryClick }: HeroProps) {
             <h1 className="mt-5 text-[clamp(40px,5.6vw,76px)] font-bold leading-[1.05] tracking-[-0.035em] text-label-strong [text-wrap:balance]">
               안전한 놀이터,
               <br />
-              <span className="text-brand">한 번의 점검</span>으로
+              <HeroHighlighter animateDelay={0.42}>한 번의 점검</HeroHighlighter>으로
               <br />
               완성됩니다
             </h1>
           </Reveal>
 
           <Reveal y={20} delay={180} eager>
-            <p className="mt-6 max-w-[520px] text-[18.5px] leading-[1.55] tracking-[-0.005em] text-label-neutral">
-              월 1회 안전점검부터 법적 의무사항 확인, 전자서명, PDF 보고서까지.
-              복잡한 어린이놀이시설 안전관리를 하나의 플랫폼에서 처리하세요.
-            </p>
+            <HeroRotatingSubtitle className="mt-6 max-w-[520px] text-[18.5px] leading-[1.55] tracking-[-0.005em] text-label-neutral" />
           </Reveal>
 
           <Reveal y={16} delay={260} eager>

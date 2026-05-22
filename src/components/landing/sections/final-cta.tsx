@@ -109,7 +109,7 @@ function Footer() {
               어린이놀이시설 안전관리 SaaS · 행정안전부 안전관리 항목 기준
             </p>
             <p className="mt-4 text-[12.5px] leading-relaxed text-[rgba(247,247,248,.4)]">
-              (주)놀이지킴 · 대표 김민지
+              한국창의융합연구원 · 대표 이유진
               <br />
               사업자등록번호 123-45-67890
               <br />

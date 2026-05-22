@@ -1,3 +1,5 @@
+import { BrandWordmark } from "@/components/landing/brand-wordmark"
+
 interface BrandMarkProps {
   size?: number
   className?: string
@@ -45,12 +47,10 @@ export function BrandLogo({ size = 22, className }: BrandLogoProps) {
       className={`inline-flex items-center gap-2 ${className ?? ""}`}
     >
       <BrandMark size={size + 6} />
-      <span
+      <BrandWordmark
         className="font-bold tracking-[-0.02em] text-label-strong"
         style={{ fontSize: size * 0.78 }}
-      >
-        놀이지킴
-      </span>
+      />
     </span>
   )
 }
@@ -61,12 +61,11 @@ export function BrandLogoDark({ size = 22, className }: BrandLogoProps) {
       className={`inline-flex items-center gap-2 ${className ?? ""}`}
     >
       <BrandMark size={size + 6} />
-      <span
+      <BrandWordmark
+        variant="dark"
         className="font-bold tracking-[-0.02em] text-white"
         style={{ fontSize: size * 0.82 }}
-      >
-        놀이지킴
-      </span>
+      />
     </span>
   )
 }
