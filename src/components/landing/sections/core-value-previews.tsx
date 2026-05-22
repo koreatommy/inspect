@@ -1,6 +1,22 @@
 "use client"
 
+import Image from "next/image"
 import { Bell, Check, CheckCircle, ShieldCheck, Wrench } from "lucide-react"
+
+const REPAIR_PHOTOS = [
+  {
+    src: "/landing/hero/repair-before.webp",
+    alt: "그네 수리 전 현장 사진",
+    label: "수리 전",
+    tagColor: "#E52222",
+  },
+  {
+    src: "/landing/hero/repair-after.webp",
+    alt: "그네 수리 후 현장 사진",
+    label: "수리 후",
+    tagColor: "#009632",
+  },
+] as const
 
 export type CoreValueTone = {
   fg: string
@@ -186,7 +202,7 @@ function PreviewPdf() {
           </div>
         ))}
         <div className="absolute bottom-4 left-4 right-4 flex justify-between border-t border-dashed border-line-normal pt-1.5 text-[8px] text-label-alternative">
-          <span>박지수 안전관리자</span>
+          <span>이영일 안전관리자</span>
           <span>(서명)</span>
         </div>
       </div>
@@ -214,20 +230,24 @@ function PreviewRepair() {
   return (
     <div className="px-[18px] py-3.5">
       <div className="mb-3 grid grid-cols-2 gap-2">
-        {[
-          { label: "수리 전", g: "linear-gradient(135deg, #FFB36B, #FF7A45)", tag: "#E52222" },
-          { label: "수리 후", g: "linear-gradient(135deg, #98E6B5, #00BF40)", tag: "#009632" },
-        ].map((c, i) => (
+        {REPAIR_PHOTOS.map((photo, i) => (
           <div
-            key={c.label}
-            className="relative aspect-square rounded-[10px] landing-fade-row-in"
-            style={{ background: c.g, animationDelay: `${i * 120}ms` }}
+            key={photo.label}
+            className="relative aspect-square overflow-hidden rounded-[10px] landing-fade-row-in"
+            style={{ animationDelay: `${i * 120}ms` }}
           >
+            <Image
+              src={photo.src}
+              alt={photo.alt}
+              fill
+              sizes="(max-width: 1024px) 50vw, 170px"
+              className="object-cover"
+            />
             <div
-              className="absolute left-2 top-2 rounded px-[7px] py-[3px] text-[10px] font-bold"
-              style={{ background: "#fff", color: c.tag }}
+              className="absolute left-2 top-2 z-10 rounded px-[7px] py-[3px] text-[10px] font-bold"
+              style={{ background: "#fff", color: photo.tagColor }}
             >
-              {c.label}
+              {photo.label}
             </div>
           </div>
         ))}
@@ -241,13 +261,13 @@ function PreviewRepair() {
             <Wrench className="size-3.5" strokeWidth={1.5} />
           </div>
           <div className="text-[13px] font-bold text-label-normal">
-            미끄럼판 균열 보수
+            그네줄 교체 보수
           </div>
         </div>
         <div className="text-xs leading-relaxed text-label-neutral">
           요청 2026.05.03 · 완료 2026.05.18
           <br />
-          담당 박지수 · 시공사 (주)안전놀이
+          담당 이영일 · 시공사 (주)안전놀이
         </div>
       </div>
       <div

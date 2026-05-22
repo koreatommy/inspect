@@ -278,6 +278,8 @@
 /* ====== Landing Page Styles ======
    핸드오프와 동일: 섹션은 투명, html/body의 --page-bg만 스크롤에 따라 전환 */
 html:has(.landing-page) {
+  /* Framer Motion useScroll: scroll container must be non-static */
+  position: relative;
   --page-bg: #fbfcfe;
   --page-fg: dark;
   background-color: var(--page-bg);

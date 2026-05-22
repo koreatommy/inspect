@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useEffect, useState } from "react"
 import {
   Building2,
@@ -10,13 +11,47 @@ import {
   Check,
 } from "lucide-react"
 
+const PHOTO_CELLS = [
+  {
+    src: "/landing/hero/repair-before.webp",
+    alt: "그네 수리 전 현장 사진",
+    tag: "수리 전",
+    tagColor: "#E52222",
+  },
+  {
+    src: "/landing/hero/repair-after.webp",
+    alt: "그네 수리 후 현장 사진",
+    tag: "수리 후",
+    tagColor: "#009632",
+  },
+  {
+    src: "/landing/hero/hazard-1.webp",
+    alt: "그네 위해요소 현장 사진",
+  },
+  {
+    src: "/landing/hero/hazard-2.webp",
+    alt: "그네 주변 안전영역 현장 사진",
+  },
+] as const
+
 const CHECKLIST_ITEMS = [
-  "미끄럼판 균열·이탈",
-  "손잡이 견고성",
-  "바닥재 충격흡수",
-  "연결부 고정 상태",
-  "주변 안전영역",
+  { label: "그네줄 고정 상태", status: "repair" as const },
+  { label: "좌판·손잡이 견고성", status: "good" as const },
+  { label: "바닥재 충격흡수", status: "repair" as const },
+  { label: "지주·연결부 고정", status: "good" as const },
+  { label: "주변 안전영역", status: "good" as const },
 ]
+
+const STATUS_BADGE = {
+  good: {
+    label: "양호",
+    className: "bg-[#E2F8EA] text-[#009632]",
+  },
+  repair: {
+    label: "요수리",
+    className: "bg-[#FFF0E5] text-[#FF5E00]",
+  },
+} as const
 
 export function HeroPhoneMock() {
   const [stage, setStage] = useState(0)
@@ -101,7 +136,7 @@ export function HeroPhoneMock() {
               월점검 대장 · 2026.05
             </div>
             <div className="mt-1 text-lg font-bold tracking-[-0.02em] text-label-normal">
-              햇살어린이공원 · 미끄럼틀
+              햇살어린이공원 · 그네
             </div>
             <div className="mt-0.5 text-xs text-label-alternative">
               시설번호 S-2024-0571
@@ -121,9 +156,9 @@ export function HeroPhoneMock() {
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-label-alternative">
                 체크리스트
               </div>
-              {CHECKLIST_ITEMS.map((label, i) => (
+              {CHECKLIST_ITEMS.map((item, i) => (
                 <div
-                  key={label}
+                  key={item.label}
                   className="mb-1.5 flex items-center gap-2.5 rounded-[10px] border border-line-alternative bg-white px-3 py-2.5"
                 >
                   <div
@@ -151,11 +186,13 @@ export function HeroPhoneMock() {
                     ) : null}
                   </div>
                   <div className="flex-1 text-[13.5px] font-medium text-label-normal">
-                    {label}
+                    {item.label}
                   </div>
                   {checks[i] ? (
-                    <div className="rounded-full bg-[#E2F8EA] px-[7px] py-[3px] text-[10.5px] font-bold text-[#009632]">
-                      양호
+                    <div
+                      className={`rounded-full px-[7px] py-[3px] text-[10.5px] font-bold ${STATUS_BADGE[item.status].className}`}
+                    >
+                      {STATUS_BADGE[item.status].label}
                     </div>
                   ) : null}
                 </div>
@@ -175,37 +212,30 @@ export function HeroPhoneMock() {
                 현장 사진 · 위해요소
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {[
-                  {
-                    bg: "linear-gradient(135deg, #FFB36B, #FF7A45)",
-                    tag: "수리 전",
-                    tagColor: "#E52222",
-                  },
-                  {
-                    bg: "linear-gradient(135deg, #6DB1FF, #0066FF)",
-                    tag: "수리 후",
-                    tagColor: "#009632",
-                  },
-                  {
-                    bg: "linear-gradient(135deg, #98E6B5, #00BF40)",
-                  },
-                  {
-                    bg: "linear-gradient(135deg, #C0B0FF, #6541F2)",
-                  },
-                ].map((cell, i) => (
+                {PHOTO_CELLS.map((cell, i) => (
                   <div
-                    key={i}
+                    key={"src" in cell ? cell.src : i}
                     className="relative aspect-square overflow-hidden rounded-[10px] transition-all duration-[420ms] ease-out"
                     style={{
-                      background: cell.bg,
+                      background: "bg" in cell ? cell.bg : undefined,
                       opacity: stage === 1 ? 1 : 0,
                       transform: stage === 1 ? "scale(1)" : "scale(.94)",
                       transitionDelay: `${i * 100}ms`,
                     }}
                   >
-                    {cell.tag ? (
+                    {"src" in cell ? (
+                      <Image
+                        src={cell.src}
+                        alt={cell.alt}
+                        fill
+                        sizes="120px"
+                        className="object-cover"
+                        priority={cell.src === "/landing/hero/repair-before.webp"}
+                      />
+                    ) : null}
+                    {"tag" in cell ? (
                       <div
-                        className="absolute right-1.5 top-1.5 rounded px-1.5 py-0.5 text-[9px] font-bold"
+                        className="absolute right-1.5 top-1.5 z-10 rounded px-1.5 py-0.5 text-[9px] font-bold"
                         style={{
                           background: "rgba(255,255,255,.95)",
                           color: cell.tagColor,
@@ -257,7 +287,7 @@ export function HeroPhoneMock() {
                 </svg>
               </div>
               <div className="flex justify-between text-xs text-label-neutral">
-                <span>박지수 안전관리자</span>
+                <span>이영일 안전관리자</span>
                 <span>2026.05.21 14:32</span>
               </div>
               <button
