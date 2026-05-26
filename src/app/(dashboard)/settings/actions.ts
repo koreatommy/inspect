@@ -2,17 +2,21 @@
 
 import { revalidatePath } from "next/cache"
 
+import { getPersonNameValidationError } from "@/lib/inspection/person-name"
 import { createClient } from "@/lib/supabase/server"
+import {
+  getKoreanMobilePhoneValidationError,
+  normalizeKoreanMobilePhone,
+} from "@/lib/validation/korean-phone"
 
 export type PasswordChangeState = {
   success?: boolean
   error?: string
 }
 
-export type EmailChangeState = {
+export type ProfileUpdateState = {
   success?: boolean
   error?: string
-  message?: string
 }
 
 export async function changePasswordAction(
@@ -53,20 +57,24 @@ export async function changePasswordAction(
   return { success: true }
 }
 
-export async function updateAccountEmailAction(
-  _previousState: EmailChangeState,
+export async function updateMyProfileAction(
+  _previousState: ProfileUpdateState,
   formData: FormData
-): Promise<EmailChangeState> {
-  const newEmail = String(formData.get("newEmail") ?? "")
-    .trim()
-    .toLowerCase()
+): Promise<ProfileUpdateState> {
+  const displayName = String(formData.get("displayName") ?? "").trim()
+  const phoneRaw = String(formData.get("phone") ?? "").trim()
 
-  if (!newEmail) {
-    return { error: "변경할 이메일 주소를 입력해 주세요." }
+  if (!displayName) {
+    return { error: "이름을 입력해 주세요." }
+  }
+  const nameError = getPersonNameValidationError(displayName, "이름")
+  if (nameError) {
+    return { error: nameError }
   }
 
-  if (!newEmail.includes("@")) {
-    return { error: "올바른 이메일 형식이 아닙니다." }
+  const phoneError = getKoreanMobilePhoneValidationError(phoneRaw)
+  if (phoneError) {
+    return { error: phoneError }
   }
 
   const supabase = await createClient()
@@ -74,32 +82,24 @@ export async function updateAccountEmailAction(
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user?.email) {
+  if (!user) {
     return { error: "로그인이 필요합니다." }
   }
 
-  const current = user.email.trim().toLowerCase()
-  if (newEmail === current) {
-    return { error: "현재 사용 중인 이메일과 동일합니다." }
-  }
+  const phone = normalizeKoreanMobilePhone(phoneRaw)
 
-  const { error } = await supabase.auth.updateUser({ email: newEmail })
+  const { error } = await supabase
+    .from("inspection_user_roles")
+    .update({ display_name: displayName, phone })
+    .eq("user_id", user.id)
 
   if (error) {
-    const msg = error.message.toLowerCase()
-    if (msg.includes("already") || msg.includes("registered")) {
-      return { error: "이미 사용 중인 이메일입니다." }
-    }
     return {
-      error:
-        "이메일 변경에 실패했습니다. 잠시 후 다시 시도하거나 관리자에게 문의해 주세요.",
+      error: "내 정보 변경에 실패했습니다. 잠시 후 다시 시도해 주세요.",
     }
   }
 
+  revalidatePath("/settings")
   revalidatePath("/settings/account")
-  return {
-    success: true,
-    message:
-      "변경 요청이 접수되었습니다. 프로젝트 설정에 따라 새 이메일로 확인 링크가 발송될 수 있습니다.",
-  }
+  return { success: true }
 }

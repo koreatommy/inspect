@@ -20,6 +20,7 @@ export default async function SettingsUsersPage() {
     email: string | null
     display_name: string | null
     phone: string | null
+    organization: string
     status: "active" | "suspended"
     suspended_at: string | null
     suspended_until: string | null

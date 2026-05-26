@@ -11,6 +11,7 @@ export type AdminUserRow = {
   email: string | null
   display_name: string | null
   phone: string | null
+  organization: string
   status: AccountStatus
   suspended_at: string | null
   suspended_until: string | null
@@ -51,7 +52,7 @@ export async function loadAdminUserDirectory(
   const { data: roleRows, error: rolesError } = await adminClient
     .from("inspection_user_roles")
     .select(
-      "user_id, role, display_name, phone, status, suspended_at, suspended_until, suspend_reason"
+      "user_id, role, display_name, phone, organization, status, suspended_at, suspended_until, suspend_reason"
     )
 
   if (rolesError) {
@@ -68,6 +69,7 @@ export async function loadAdminUserDirectory(
         role: r.role as AppRole,
         display_name: r.display_name ?? null,
         phone: r.phone ?? null,
+        organization: r.organization,
         status: (r.status as AccountStatus | undefined) ?? "active",
         suspended_at: r.suspended_at ?? null,
         suspended_until: r.suspended_until ?? null,
@@ -84,6 +86,7 @@ export async function loadAdminUserDirectory(
       role: profile?.role ?? "VIEWER",
       display_name: profile?.display_name ?? null,
       phone: profile?.phone ?? null,
+      organization: profile?.organization ?? "미지정",
       status: profile?.status ?? "active",
       suspended_at: profile?.suspended_at ?? null,
       suspended_until: profile?.suspended_until ?? null,

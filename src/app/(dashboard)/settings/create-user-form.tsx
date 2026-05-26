@@ -76,6 +76,18 @@ export function CreateUserForm() {
               required
             />
           </div>
+          <div className="space-y-2 sm:col-span-2">
+            <label htmlFor="new-user-organization" className="text-sm font-medium">
+              소속
+            </label>
+            <Input
+              id="new-user-organization"
+              name="organization"
+              autoComplete="organization"
+              placeholder="예: 서울시 시설안전팀"
+              required
+            />
+          </div>
           <div className="space-y-2">
             <label htmlFor="new-user-password" className="text-sm font-medium">
               초기 비밀번호

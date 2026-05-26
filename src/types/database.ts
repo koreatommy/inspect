@@ -201,6 +201,7 @@ export type Database = {
         role: "ADMIN" | "MANAGER" | "INSPECTOR" | "VIEWER"
         display_name: string | null
         phone: string | null
+        organization: string
         status: "active" | "suspended"
         suspended_at: string | null
         suspended_until: string | null

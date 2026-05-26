@@ -21,7 +21,12 @@ import {
   AccountStatusBadge,
   UserAccountControls,
 } from "./user-account-controls"
-import { updateUserRoleAction, type UpdateRoleState } from "./user-actions"
+import {
+  updateUserEmailByAdminAction,
+  updateUserRoleAction,
+  type UpdateEmailState,
+  type UpdateRoleState,
+} from "./user-actions"
 
 const ASSIGNABLE_ROLES: AppRole[] = ["MANAGER", "INSPECTOR", "VIEWER"]
 
@@ -39,6 +44,7 @@ type UserRow = {
   email: string | null
   display_name: string | null
   phone: string | null
+  organization: string
   status: AccountStatus
   suspended_at: string | null
   suspended_until: string | null
@@ -50,6 +56,11 @@ function RoleChangeRow({ user }: { user: UserRow }) {
   const [state, formAction, isPending] = useActionState(
     updateUserRoleAction,
     initialState
+  )
+  const initialEmailState: UpdateEmailState = {}
+  const [emailState, emailFormAction, isEmailPending] = useActionState(
+    updateUserEmailByAdminAction,
+    initialEmailState
   )
 
   const isAdminRow = user.role === "ADMIN"
@@ -64,6 +75,7 @@ function RoleChangeRow({ user }: { user: UserRow }) {
       <TableCell className="text-sm tabular-nums">
         {user.phone ? formatKoreanMobilePhone(user.phone) : "-"}
       </TableCell>
+      <TableCell>{user.organization}</TableCell>
       <TableCell>
         <AccountStatusBadge
           status={user.status}
@@ -76,6 +88,28 @@ function RoleChangeRow({ user }: { user: UserRow }) {
         >
           {ROLE_LABELS[user.role as AppRole] ?? user.role}
         </Badge>
+      </TableCell>
+      <TableCell>
+        <form action={emailFormAction} className="flex flex-wrap items-center gap-2">
+          <input type="hidden" name="userId" value={user.user_id} />
+          <input
+            name="email"
+            type="email"
+            defaultValue={user.email ?? ""}
+            className="h-8 w-full min-w-56 rounded-lg border border-input bg-background px-2 text-sm"
+            placeholder="user@example.com"
+            required
+          />
+          <Button type="submit" size="sm" variant="outline" disabled={isEmailPending}>
+            {isEmailPending ? "변경 중..." : "이메일 변경"}
+          </Button>
+          {emailState.error ? (
+            <span className="text-xs text-destructive">{emailState.error}</span>
+          ) : null}
+          {emailState.success ? (
+            <span className="text-xs text-emerald-600">변경됨</span>
+          ) : null}
+        </form>
       </TableCell>
       <TableCell>
         {canEdit ? (
@@ -137,8 +171,10 @@ export function UserManagementTable({ users }: { users: UserRow[] }) {
           <TableHead>아이디(이메일)</TableHead>
           <TableHead>이름</TableHead>
           <TableHead>핸드폰</TableHead>
+          <TableHead>소속</TableHead>
           <TableHead>상태</TableHead>
           <TableHead>현재 역할</TableHead>
+          <TableHead>이메일 변경</TableHead>
           <TableHead>역할 변경</TableHead>
           <TableHead>계정 관리</TableHead>
         </TableRow>

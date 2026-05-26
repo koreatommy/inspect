@@ -4,36 +4,59 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { buttonVariants } from "@/components/ui/button"
 import { getCurrentRole, requireUser } from "@/lib/auth/helpers"
 import { hasPermission } from "@/lib/auth/permissions"
+import { createClient } from "@/lib/supabase/server"
+import { formatKoreanMobilePhone } from "@/lib/validation/korean-phone"
 import { cn } from "@/lib/utils"
 
-import { EmailChangeForm } from "../email-change-form"
 import { PasswordChangeForm } from "../password-change-form"
+import { ProfileUpdateForm } from "../profile-update-form"
 
 export default async function SettingsAccountPage() {
   const user = await requireUser()
   const role = await getCurrentRole()
   const canSeeSignaturePolicy = hasPermission(role, "settings:view")
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("inspection_user_roles")
+    .select("display_name, phone")
+    .eq("user_id", user.id)
+    .maybeSingle()
+  const displayName = data?.display_name ?? ""
+  const phone = data?.phone ?? ""
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold tracking-tight md:text-2xl">자기 정보</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          로그인 이메일(아이디)과 비밀번호를 변경할 수 있습니다.
+          이름·전화번호·비밀번호를 변경할 수 있습니다.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
+            <CardTitle>기본 정보</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              이름과 전화번호를 수정할 수 있습니다.
+            </p>
+            <ProfileUpdateForm displayName={displayName} phone={phone} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>이메일(아이디)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              현재 로그인에 사용 중인 주소입니다. 변경 시 Supabase 프로젝트 설정에
-              따라 새 주소로 확인 메일이 발송될 수 있습니다.
+              로그인에 사용되는 이메일(아이디)입니다. 이메일 변경은 시스템
+              관리자에게 요청해 주세요.
             </p>
-            <EmailChangeForm currentEmail={user.email ?? ""} />
+            <div className="rounded-lg border border-input bg-muted/30 px-3 py-2 text-sm">
+              {user.email ?? "-"}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -42,6 +65,11 @@ export default async function SettingsAccountPage() {
           </CardHeader>
           <CardContent>
             <PasswordChangeForm />
+            {phone ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                현재 등록된 번호: {formatKoreanMobilePhone(phone)}
+              </p>
+            ) : null}
           </CardContent>
         </Card>
       </div>
