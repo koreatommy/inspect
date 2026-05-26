@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button"
 export function SignaturePad({
   name,
   label,
+  clearButtonLabel = "캔버스 지우기",
 }: {
   name: string
   label: string
+  clearButtonLabel?: string
 }) {
   const ref = useRef<SignatureCanvas>(null)
   const [dataUrl, setDataUrl] = useState("")
@@ -28,7 +30,7 @@ export function SignaturePad({
             setDataUrl("")
           }}
         >
-          서명 초기화
+          {clearButtonLabel}
         </Button>
       </div>
       <div className="rounded-lg border bg-white p-2 dark:bg-gray-50">

@@ -7,6 +7,7 @@ export function shouldAutoOpenLoginDialog(
   hash = "",
 ): boolean {
   if (searchParams.get("login") === "open") return true
+  if (searchParams.get("suspended") === "1") return true
   if (hash === "#login") return true
 
   const redirectedFrom = searchParams.get("redirectedFrom")

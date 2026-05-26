@@ -20,6 +20,10 @@ export default async function SettingsUsersPage() {
     email: string | null
     display_name: string | null
     phone: string | null
+    status: "active" | "suspended"
+    suspended_at: string | null
+    suspended_until: string | null
+    suspend_reason: string | null
   }> = []
 
   let missingServiceRole = false
@@ -49,7 +53,7 @@ export default async function SettingsUsersPage() {
           사용자 관리
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          계정 생성·역할 변경과 역할별 기능을 확인합니다.
+          계정 생성·역할 변경·일시 정지·해제와 역할별 기능을 확인합니다.
         </p>
       </div>
 

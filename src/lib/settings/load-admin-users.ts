@@ -1,6 +1,7 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js"
 
 import type { Database } from "@/types/database"
+import type { AccountStatus } from "@/lib/auth/account-status"
 import type { AppRole } from "@/types/inspection"
 import { authAdminKeyErrorHint } from "@/lib/supabase/service-key"
 
@@ -10,6 +11,10 @@ export type AdminUserRow = {
   email: string | null
   display_name: string | null
   phone: string | null
+  status: AccountStatus
+  suspended_at: string | null
+  suspended_until: string | null
+  suspend_reason: string | null
 }
 
 /**
@@ -45,7 +50,9 @@ export async function loadAdminUserDirectory(
 
   const { data: roleRows, error: rolesError } = await adminClient
     .from("inspection_user_roles")
-    .select("user_id, role, display_name, phone")
+    .select(
+      "user_id, role, display_name, phone, status, suspended_at, suspended_until, suspend_reason"
+    )
 
   if (rolesError) {
     return {
@@ -61,6 +68,10 @@ export async function loadAdminUserDirectory(
         role: r.role as AppRole,
         display_name: r.display_name ?? null,
         phone: r.phone ?? null,
+        status: (r.status as AccountStatus | undefined) ?? "active",
+        suspended_at: r.suspended_at ?? null,
+        suspended_until: r.suspended_until ?? null,
+        suspend_reason: r.suspend_reason ?? null,
       },
     ])
   )
@@ -73,6 +84,10 @@ export async function loadAdminUserDirectory(
       role: profile?.role ?? "VIEWER",
       display_name: profile?.display_name ?? null,
       phone: profile?.phone ?? null,
+      status: profile?.status ?? "active",
+      suspended_at: profile?.suspended_at ?? null,
+      suspended_until: profile?.suspended_until ?? null,
+      suspend_reason: profile?.suspend_reason ?? null,
     }
   })
 

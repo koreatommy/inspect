@@ -1,5 +1,6 @@
 import { getPersonNameValidationError } from "@/lib/inspection/person-name"
 import type { MonthlyInspectionItemRow, MonthlyInspectionRow } from "@/types/database"
+import { requiresInspectionNote } from "@/types/inspection"
 
 export function validateCompletion(
   inspection: MonthlyInspectionRow,
@@ -12,7 +13,7 @@ export function validateCompletion(
   if (items.length === 0) errors.push("점검 항목이 없습니다.")
 
   for (const item of items) {
-    if (item.result_status !== "GOOD" && !item.note?.trim()) {
+    if (requiresInspectionNote(item.result_status) && !item.note?.trim()) {
       errors.push(`${item.equipment_name}의 점검내용을 입력해 주세요.`)
     }
   }

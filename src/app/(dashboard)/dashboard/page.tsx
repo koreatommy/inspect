@@ -3,7 +3,10 @@ import { Suspense } from "react"
 import { DailySafetyQuiz } from "@/components/dashboard/daily-safety-quiz"
 import { WeatherWidget } from "@/components/dashboard/weather-widget"
 import { QuickActions } from "@/components/dashboard/quick-actions"
-import { getCurrentUser } from "@/lib/auth/helpers"
+import {
+  getCurrentUserProfile,
+  resolveDisplayLabel,
+} from "@/lib/auth/helpers"
 import { getDailySafetyQuiz } from "@/lib/quiz/get-daily-quiz"
 
 import { DashboardContent, DashboardContentSkeleton } from "../dashboard-content"
@@ -16,7 +19,8 @@ function getGreeting() {
 }
 
 export default async function DashboardPage() {
-  const user = await getCurrentUser()
+  const profile = await getCurrentUserProfile()
+  const displayLabel = resolveDisplayLabel(profile)
 
   const today = new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
@@ -32,7 +36,8 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold tracking-tight md:text-2xl">
-          {getGreeting()}{user?.email ? `, ${user.email.split("@")[0]}님` : ""}
+          {getGreeting()}
+          {displayLabel !== "사용자" ? `, ${displayLabel}님` : ""}
         </h2>
         <div className="mt-3 grid gap-3 lg:grid-cols-2">
           <WeatherWidget className="mt-0 w-full" />

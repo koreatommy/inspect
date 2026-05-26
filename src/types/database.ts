@@ -201,6 +201,11 @@ export type Database = {
         role: "ADMIN" | "MANAGER" | "INSPECTOR" | "VIEWER"
         display_name: string | null
         phone: string | null
+        status: "active" | "suspended"
+        suspended_at: string | null
+        suspended_until: string | null
+        suspend_reason: string | null
+        suspended_by: string | null
         created_at: string
         updated_at: string
       }>
@@ -208,7 +213,12 @@ export type Database = {
       admin_memos: TableDefinition<Record<string, unknown>>
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      sync_my_account_status: {
+        Args: Record<string, never>
+        Returns: Json
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }

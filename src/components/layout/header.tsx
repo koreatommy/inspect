@@ -9,11 +9,11 @@ import { ROLE_LABELS } from "@/lib/auth/permissions"
 import type { AppRole } from "@/types/inspection"
 
 type HeaderProps = {
-  email: string
+  displayLabel: string
   role: AppRole
 }
 
-export function Header({ email, role }: HeaderProps) {
+export function Header({ displayLabel, role }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm print:hidden lg:px-6">
       <div className="flex items-center gap-3">
@@ -28,7 +28,7 @@ export function Header({ email, role }: HeaderProps) {
           {ROLE_LABELS[role]}
         </Badge>
         <span className="hidden text-sm text-muted-foreground md:inline">
-          {email || "로그인 필요"}
+          {displayLabel || "로그인 필요"}
         </span>
         <ThemeToggle />
         <form action={signOut}>

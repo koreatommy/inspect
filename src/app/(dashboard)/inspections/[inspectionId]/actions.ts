@@ -6,14 +6,11 @@ import { redirect } from "next/navigation"
 import { getCurrentRole, hasRole } from "@/lib/auth/helpers"
 import { hasPermission } from "@/lib/auth/permissions"
 import { validateCompletion } from "@/lib/inspection/complete"
+import { parseInspectionItemUpdates } from "@/lib/inspection/parse-item-updates"
 import { getPersonNameValidationError } from "@/lib/inspection/person-name"
 import { refreshLedgerSnapshotForInspection } from "@/lib/inspection/refresh-ledger-snapshot"
 import { buildLedgerRow } from "@/lib/inspection/snapshot"
 import { createClient } from "@/lib/supabase/server"
-import {
-  INSPECTION_RESULT_STATUSES,
-  type InspectionResultStatus,
-} from "@/types/inspection"
 
 function parseDataUrl(dataUrl: string) {
   const match = dataUrl.match(/^data:image\/png;base64,(.+)$/)
@@ -110,31 +107,7 @@ async function executeInspectionDraftSave(formData: FormData) {
     .select("id")
     .eq("inspection_id", inspectionId)
   const ownedItemIds = new Set(ownedItems?.map((item) => item.id) ?? [])
-  const updates: Array<{
-    id: string
-    result_status: InspectionResultStatus
-    note: string | null
-  }> = []
-
-  for (const [key, value] of formData.entries()) {
-    if (!key.startsWith("status:")) {
-      continue
-    }
-
-    const id = key.replace("status:", "")
-    const note = String(formData.get(`note:${id}`) ?? "").trim()
-    const status = String(value) as InspectionResultStatus
-
-    if (!ownedItemIds.has(id) || !INSPECTION_RESULT_STATUSES.includes(status)) {
-      continue
-    }
-
-    updates.push({
-      id,
-      result_status: status,
-      note: note || null,
-    })
-  }
+  const updates = parseInspectionItemUpdates(formData, ownedItemIds)
 
   for (const update of updates) {
     const { error } = await supabase

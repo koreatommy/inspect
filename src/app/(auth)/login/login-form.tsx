@@ -7,8 +7,11 @@ import { useRouter, useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { resolveAccountAccess } from "@/lib/auth/account-access"
+import { getSuspendedMessage } from "@/lib/auth/account-status"
 import { getSafeRedirectPath } from "@/lib/auth/safe-redirect"
 import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
 function normalizeLoginIdentifier(identifier: string) {
   const trimmed = identifier.trim()
@@ -61,10 +64,11 @@ export function LoginForm({
     }
 
     const supabase = createClient()
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    const { data: signInData, error: authError } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
     if (authError) {
       const msg = authError.message ?? ""
@@ -82,6 +86,17 @@ export function LoginForm({
       }
       setIsPending(false)
       return
+    }
+
+    const userId = signInData.user?.id
+    if (userId) {
+      const access = await resolveAccountAccess(supabase, userId)
+      if (access.blocked) {
+        toast.error(getSuspendedMessage(access.suspendReason))
+        await supabase.auth.signOut()
+        setIsPending(false)
+        return
+      }
     }
 
     let redirectTo = getSafeRedirectPath(redirectedFrom)

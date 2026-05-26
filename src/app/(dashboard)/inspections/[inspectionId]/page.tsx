@@ -6,6 +6,7 @@ import { InspectionForm } from "@/components/inspection/inspection-form"
 import { getCurrentRole } from "@/lib/auth/helpers"
 import { hasPermission } from "@/lib/auth/permissions"
 import { hydrateInspectionItemsFromLedger } from "@/lib/inspection/hydrate-items-from-ledger"
+import { getSignatureSignedUrl } from "@/lib/inspection/signature-url"
 import { createClient } from "@/lib/supabase/server"
 
 type InspectionPageProps = {
@@ -82,6 +83,18 @@ export default async function InspectionPage({
       ? hydrateInspectionItemsFromLedger(items ?? [], storedLedger)
       : (items ?? [])
 
+  const [safetyManagerSignatureSrc, consignedInspectorSignatureSrc] =
+    await Promise.all([
+      getSignatureSignedUrl(
+        supabase,
+        inspection.safety_manager_signature_url
+      ),
+      getSignatureSignedUrl(
+        supabase,
+        inspection.consigned_inspector_signature_url
+      ),
+    ])
+
   return (
     <div className="space-y-6">
       <InspectionSaveAlertModal saved={saved} />
@@ -103,7 +116,13 @@ export default async function InspectionPage({
           {decodeURIComponent(error)}
         </p>
       ) : null}
-      <InspectionForm inspection={inspection} items={hydratedItems} role={role} />
+      <InspectionForm
+        inspection={inspection}
+        items={hydratedItems}
+        role={role}
+        safetyManagerSignatureSrc={safetyManagerSignatureSrc}
+        consignedInspectorSignatureSrc={consignedInspectorSignatureSrc}
+      />
     </div>
   )
 }

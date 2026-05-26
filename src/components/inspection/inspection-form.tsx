@@ -21,18 +21,23 @@ import type {
 } from "@/types/database"
 import type { AppRole } from "@/types/inspection"
 import { EquipmentInspectionTable } from "./equipment-table"
-import { SignaturePad } from "./signature-pad"
+import { SignatureField } from "./signature-field"
+import { SignaturePreview } from "./signature-preview"
 
 type InspectionFormProps = {
   inspection: MonthlyInspectionRow
   items: MonthlyInspectionItemRow[]
   role: AppRole
+  safetyManagerSignatureSrc: string | null
+  consignedInspectorSignatureSrc: string | null
 }
 
 export function InspectionForm({
   inspection,
   items,
   role,
+  safetyManagerSignatureSrc,
+  consignedInspectorSignatureSrc,
 }: InspectionFormProps) {
   const canSignSafetyManager = hasPermission(
     role,
@@ -110,34 +115,38 @@ export function InspectionForm({
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {canSignSafetyManager && !isReadOnly ? (
-              <SignaturePad
+              <SignatureField
                 name="safetyManagerSignature"
                 label="안전관리자 서명"
+                existingSignatureSrc={safetyManagerSignatureSrc}
               />
             ) : (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">안전관리자 서명</label>
-                <p className="rounded-lg border bg-muted/50 px-3 py-8 text-center text-sm text-muted-foreground">
-                  {inspection.safety_manager_signature_url
-                    ? "서명 완료"
-                    : "이 계정으로는 안전관리자 서명을 입력할 수 없습니다."}
-                </p>
-              </div>
+              <SignaturePreview
+                label="안전관리자 서명"
+                src={safetyManagerSignatureSrc}
+                fallbackMessage={
+                  inspection.safety_manager_signature_url
+                    ? "서명이 등록되어 있습니다."
+                    : "이 계정으로는 안전관리자 서명을 입력할 수 없습니다."
+                }
+              />
             )}
             {canSignConsignedInspector && !isReadOnly ? (
-              <SignaturePad
+              <SignatureField
                 name="consignedInspectorSignature"
                 label="위탁점검자 서명"
+                existingSignatureSrc={consignedInspectorSignatureSrc}
               />
             ) : (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">위탁점검자 서명</label>
-                <p className="rounded-lg border bg-muted/50 px-3 py-8 text-center text-sm text-muted-foreground">
-                  {inspection.consigned_inspector_signature_url
-                    ? "서명 완료"
-                    : "서명 권한이 없습니다"}
-                </p>
-              </div>
+              <SignaturePreview
+                label="위탁점검자 서명"
+                src={consignedInspectorSignatureSrc}
+                fallbackMessage={
+                  inspection.consigned_inspector_signature_url
+                    ? "서명이 등록되어 있습니다."
+                    : "서명 권한이 없습니다."
+                }
+              />
             )}
           </div>
         </CardContent>

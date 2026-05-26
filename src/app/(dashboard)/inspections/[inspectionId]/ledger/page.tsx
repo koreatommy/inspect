@@ -12,6 +12,7 @@ import { loadCumulativeLedgerRowsByMonth } from "@/lib/inspection/cumulative-led
 import { omitRenderedAt } from "@/lib/inspection/ledger-display"
 import { ledgerPrintDocumentTitle } from "@/lib/inspection/ledger-print-title"
 import { buildLedgerRow } from "@/lib/inspection/snapshot"
+import { getSignatureSignedUrl } from "@/lib/inspection/signature-url"
 import { createClient } from "@/lib/supabase/server"
 import { cn } from "@/lib/utils"
 
@@ -19,19 +20,6 @@ type LedgerPageProps = {
   params: Promise<{
     inspectionId: string
   }>
-}
-
-async function getSignedUrl(path: string | null | undefined) {
-  if (!path) {
-    return null
-  }
-
-  const supabase = await createClient()
-  const { data } = await supabase.storage
-    .from("signatures")
-    .createSignedUrl(path, 60 * 10)
-
-  return data?.signedUrl ?? null
 }
 
 export default async function LedgerPage({ params }: LedgerPageProps) {
@@ -97,7 +85,7 @@ export default async function LedgerPage({ params }: LedgerPageProps) {
   const signedUrlByPath = new Map<string, string | null>()
   await Promise.all(
     [...paths].map(async (p) => {
-      signedUrlByPath.set(p, await getSignedUrl(p))
+      signedUrlByPath.set(p, await getSignatureSignedUrl(supabase, p))
     })
   )
 

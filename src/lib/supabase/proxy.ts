@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { type NextRequest, NextResponse } from "next/server"
 
+import { resolveAccountAccess } from "@/lib/auth/account-access"
 import type { Database } from "@/types/database"
 import { getSupabaseEnv } from "./env"
 
@@ -52,11 +53,25 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  if (user && (pathname === "/login" || pathname === "/")) {
-    const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = "/dashboard"
-    redirectUrl.search = ""
-    return NextResponse.redirect(redirectUrl)
+  if (user) {
+    const access = await resolveAccountAccess(supabase, user.id)
+
+    if (access.blocked) {
+      await supabase.auth.signOut()
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = "/login"
+      redirectUrl.search = ""
+      redirectUrl.searchParams.set("suspended", "1")
+      redirectUrl.searchParams.set("login", "open")
+      return NextResponse.redirect(redirectUrl)
+    }
+
+    if (pathname === "/login" || pathname === "/") {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = "/dashboard"
+      redirectUrl.search = ""
+      return NextResponse.redirect(redirectUrl)
+    }
   }
 
   return response

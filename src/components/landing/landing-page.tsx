@@ -17,8 +17,10 @@ import { Comparison } from "./sections/comparison"
 import { Faq } from "./sections/faq"
 import { FinalCta } from "./sections/final-cta"
 import { LoginDialog } from "./login-dialog"
+import { getSuspendedMessage } from "@/lib/auth/account-status"
 import { shouldAutoOpenLoginDialog } from "@/lib/auth/login-auto-open"
 import { scrollToId } from "@/lib/landing/scroll"
+import { toast } from "sonner"
 
 export function LandingPage() {
   const router = useRouter()
@@ -26,6 +28,7 @@ export function LandingPage() {
   const searchParams = useSearchParams()
   const [loginOpen, setLoginOpen] = useState(false)
   const hasAutoOpenedRef = useRef(false)
+  const hasSuspendedToastRef = useRef(false)
 
   const redirectedFrom = searchParams.get("redirectedFrom")
 
@@ -50,6 +53,20 @@ export function LandingPage() {
     }
   }, [pathname, searchParams, router])
 
+  useEffect(() => {
+    if (searchParams.get("suspended") !== "1" || hasSuspendedToastRef.current) {
+      return
+    }
+
+    hasSuspendedToastRef.current = true
+    toast.error(getSuspendedMessage())
+
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("suspended")
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, [pathname, searchParams, router])
+
   const handleLoginOpenChange = useCallback(
     (open: boolean) => {
       setLoginOpen(open)
@@ -60,6 +77,10 @@ export function LandingPage() {
 
         if (params.get("login") === "open") {
           params.delete("login")
+          changed = true
+        }
+        if (params.get("suspended") === "1") {
+          params.delete("suspended")
           changed = true
         }
 

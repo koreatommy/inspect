@@ -12,10 +12,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import type { AccountStatus } from "@/lib/auth/account-status"
 import { ROLE_LABELS } from "@/lib/auth/permissions"
 import { formatKoreanMobilePhone } from "@/lib/validation/korean-phone"
 import type { AppRole } from "@/types/inspection"
 
+import {
+  AccountStatusBadge,
+  UserAccountControls,
+} from "./user-account-controls"
 import { updateUserRoleAction, type UpdateRoleState } from "./user-actions"
 
 const ASSIGNABLE_ROLES: AppRole[] = ["MANAGER", "INSPECTOR", "VIEWER"]
@@ -34,6 +39,10 @@ type UserRow = {
   email: string | null
   display_name: string | null
   phone: string | null
+  status: AccountStatus
+  suspended_at: string | null
+  suspended_until: string | null
+  suspend_reason: string | null
 }
 
 function RoleChangeRow({ user }: { user: UserRow }) {
@@ -54,6 +63,12 @@ function RoleChangeRow({ user }: { user: UserRow }) {
       <TableCell>{user.display_name ?? "-"}</TableCell>
       <TableCell className="text-sm tabular-nums">
         {user.phone ? formatKoreanMobilePhone(user.phone) : "-"}
+      </TableCell>
+      <TableCell>
+        <AccountStatusBadge
+          status={user.status}
+          suspendedUntil={user.suspended_until}
+        />
       </TableCell>
       <TableCell>
         <Badge
@@ -93,6 +108,17 @@ function RoleChangeRow({ user }: { user: UserRow }) {
           </span>
         )}
       </TableCell>
+      <TableCell>
+        <UserAccountControls
+          user={{
+            user_id: user.user_id,
+            role: user.role,
+            status: user.status,
+            suspended_until: user.suspended_until,
+            suspend_reason: user.suspend_reason,
+          }}
+        />
+      </TableCell>
     </TableRow>
   )
 }
@@ -111,8 +137,10 @@ export function UserManagementTable({ users }: { users: UserRow[] }) {
           <TableHead>아이디(이메일)</TableHead>
           <TableHead>이름</TableHead>
           <TableHead>핸드폰</TableHead>
+          <TableHead>상태</TableHead>
           <TableHead>현재 역할</TableHead>
           <TableHead>역할 변경</TableHead>
+          <TableHead>계정 관리</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
