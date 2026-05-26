@@ -14,9 +14,7 @@ export async function createClient() {
         return cookieStore.getAll()
       },
       setAll(cookiesToSet) {
-        console.log("[Supabase] setAll called with", cookiesToSet.length, "cookies")
         cookiesToSet.forEach(({ name, value, options }) => {
-          console.log("[Supabase] Setting cookie:", name, "value length:", value?.length ?? 0)
           cookieStore.set(name, value, options)
         })
       },

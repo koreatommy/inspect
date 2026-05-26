@@ -2,6 +2,8 @@
 
 import Image from "next/image"
 import { useEffect, useState } from "react"
+
+import { useMediaQuery } from "@/hooks/use-media-query"
 import {
   Building2,
   BarChart3,
@@ -53,21 +55,17 @@ const STATUS_BADGE = {
   },
 } as const
 
+const REDUCED_MOTION_CHECKS = [true, true, true, true, false] as const
+
 export function HeroPhoneMock() {
+  const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)")
   const [stage, setStage] = useState(0)
   const [checks, setChecks] = useState([false, false, false, false, false])
-  const [reduceMotion, setReduceMotion] = useState(false)
-
-  useEffect(() => {
-    setReduceMotion(
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    )
-  }, [])
+  const displayStage = reduceMotion ? 0 : stage
+  const displayChecks = reduceMotion ? [...REDUCED_MOTION_CHECKS] : checks
 
   useEffect(() => {
     if (reduceMotion) {
-      setChecks([true, true, true, true, false])
-      setStage(0)
       return
     }
 
@@ -148,9 +146,9 @@ export function HeroPhoneMock() {
             <div
               className="absolute inset-0 px-[18px] transition-all duration-[360ms] ease-out"
               style={{
-                opacity: stage === 0 ? 1 : 0,
-                transform: stage === 0 ? "translateY(0)" : "translateY(-16px)",
-                pointerEvents: stage === 0 ? "auto" : "none",
+                opacity: displayStage === 0 ? 1 : 0,
+                transform: displayStage === 0 ? "translateY(0)" : "translateY(-16px)",
+                pointerEvents: displayStage === 0 ? "auto" : "none",
               }}
             >
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-label-alternative">
@@ -164,15 +162,15 @@ export function HeroPhoneMock() {
                   <div
                     className="flex size-5 items-center justify-center rounded-md transition-colors duration-200"
                     style={{
-                      background: checks[i]
+                      background: displayChecks[i]
                         ? "var(--semantic-primary-normal)"
                         : "#fff",
-                      border: checks[i]
+                      border: displayChecks[i]
                         ? "1.5px solid var(--semantic-primary-normal)"
                         : "1.5px solid var(--semantic-line-normal-normal)",
                     }}
                   >
-                    {checks[i] ? (
+                    {displayChecks[i] ? (
                       <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
                         <path
                           d="M2.5 6.5l2.5 2.5L9.5 3.5"
@@ -188,7 +186,7 @@ export function HeroPhoneMock() {
                   <div className="flex-1 text-[13.5px] font-medium text-label-normal">
                     {item.label}
                   </div>
-                  {checks[i] ? (
+                  {displayChecks[i] ? (
                     <div
                       className={`rounded-full px-[7px] py-[3px] text-[10.5px] font-bold ${STATUS_BADGE[item.status].className}`}
                     >
@@ -203,9 +201,9 @@ export function HeroPhoneMock() {
             <div
               className="absolute inset-0 px-[18px] transition-all duration-[360ms] ease-out"
               style={{
-                opacity: stage === 1 ? 1 : 0,
-                transform: stage === 1 ? "translateY(0)" : "translateY(20px)",
-                pointerEvents: stage === 1 ? "auto" : "none",
+                opacity: displayStage === 1 ? 1 : 0,
+                transform: displayStage === 1 ? "translateY(0)" : "translateY(20px)",
+                pointerEvents: displayStage === 1 ? "auto" : "none",
               }}
             >
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-label-alternative">
@@ -217,8 +215,8 @@ export function HeroPhoneMock() {
                     key={"src" in cell ? cell.src : i}
                     className="relative aspect-square overflow-hidden rounded-[10px] transition-all duration-[420ms] ease-out"
                     style={{
-                      opacity: stage === 1 ? 1 : 0,
-                      transform: stage === 1 ? "scale(1)" : "scale(.94)",
+                      opacity: displayStage === 1 ? 1 : 0,
+                      transform: displayStage === 1 ? "scale(1)" : "scale(.94)",
                       transitionDelay: `${i * 100}ms`,
                     }}
                   >
@@ -256,9 +254,9 @@ export function HeroPhoneMock() {
             <div
               className="absolute inset-0 px-[18px] transition-all duration-[360ms] ease-out"
               style={{
-                opacity: stage === 2 ? 1 : 0,
-                transform: stage === 2 ? "translateY(0)" : "translateY(20px)",
-                pointerEvents: stage === 2 ? "auto" : "none",
+                opacity: displayStage === 2 ? 1 : 0,
+                transform: displayStage === 2 ? "translateY(0)" : "translateY(20px)",
+                pointerEvents: displayStage === 2 ? "auto" : "none",
               }}
             >
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-label-alternative">
@@ -278,7 +276,7 @@ export function HeroPhoneMock() {
                     strokeLinecap="round"
                     strokeDasharray="500"
                     style={{
-                      strokeDashoffset: stage === 2 ? 0 : 500,
+                      strokeDashoffset: displayStage === 2 ? 0 : 500,
                       transition:
                         "stroke-dashoffset 1400ms cubic-bezier(.5, .1, .3, 1)",
                     }}
@@ -301,16 +299,16 @@ export function HeroPhoneMock() {
             <div
               className="absolute inset-0 px-[18px] transition-all duration-[360ms] ease-out"
               style={{
-                opacity: stage === 3 ? 1 : 0,
-                transform: stage === 3 ? "translateY(0)" : "translateY(20px)",
-                pointerEvents: stage === 3 ? "auto" : "none",
+                opacity: displayStage === 3 ? 1 : 0,
+                transform: displayStage === 3 ? "translateY(0)" : "translateY(20px)",
+                pointerEvents: displayStage === 3 ? "auto" : "none",
               }}
             >
               <div
                 className="rounded-xl bg-white p-3.5 shadow-[0_12px_30px_rgba(0,30,80,.12),0_2px_6px_rgba(0,30,80,.05)] transition-transform duration-[520ms] ease-out"
                 style={{
                   transform:
-                    stage === 3 ? "scale(1) rotate(-1.5deg)" : "scale(.92) rotate(0)",
+                    displayStage === 3 ? "scale(1) rotate(-1.5deg)" : "scale(.92) rotate(0)",
                 }}
               >
                 <div className="flex items-start justify-between">

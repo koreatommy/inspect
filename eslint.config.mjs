@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Browser Babel prototype handoff (globals, no imports) — not production code
+    "docs/design_handoff_saas_landing/**",
   ]),
 ]);
 

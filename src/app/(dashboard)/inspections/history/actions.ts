@@ -21,28 +21,23 @@ export async function deleteMonthlyInspectionFromHistory(formData: FormData) {
 
   const supabase = await createClient()
 
-  const { data: inspection } = await supabase
-    .from("monthly_inspections")
-    .select("facility_no")
-    .eq("id", inspectionId)
-    .maybeSingle()
-
-  if (!inspection) {
-    redirect("/inspections/history?error=not-found")
-  }
-
-  const { error } = await supabase
+  const { data: deletedInspection, error } = await supabase
     .from("monthly_inspections")
     .delete()
     .eq("id", inspectionId)
+    .select("facility_no")
+    .maybeSingle()
 
   if (error) {
     redirect("/inspections/history?error=delete-failed")
   }
 
-  revalidatePath("/")
+  if (!deletedInspection) {
+    redirect("/inspections/history?error=not-found")
+  }
+
   revalidatePath("/inspections/history")
-  revalidatePath(`/facilities/${inspection.facility_no}`)
+  revalidatePath(`/facilities/${deletedInspection.facility_no}`)
 
   redirect("/inspections/history?deleted=1")
 }

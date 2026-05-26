@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { ArrowRight } from "lucide-react"
 
-import { COPY } from "@/lib/landing/copy"
 import {
   CALCULATOR_SLIDER,
   calculatePrice,

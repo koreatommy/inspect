@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useFormStatus } from "react-dom"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -14,6 +15,16 @@ import {
 } from "@/components/ui/dialog"
 
 import { deleteMonthlyInspectionFromHistory } from "./actions"
+
+function DeleteSubmitButton() {
+  const { pending } = useFormStatus()
+
+  return (
+    <Button type="submit" variant="destructive" disabled={pending}>
+      {pending ? "삭제 중..." : "삭제"}
+    </Button>
+  )
+}
 
 export function DeleteInspectionButton({
   inspectionId,
@@ -50,9 +61,7 @@ export function DeleteInspectionButton({
           </Button>
           <form action={deleteMonthlyInspectionFromHistory}>
             <input type="hidden" name="inspectionId" value={inspectionId} />
-            <Button type="submit" variant="destructive">
-              삭제
-            </Button>
+            <DeleteSubmitButton />
           </form>
         </DialogFooter>
       </DialogContent>
