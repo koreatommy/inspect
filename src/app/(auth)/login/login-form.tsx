@@ -92,7 +92,9 @@ export function LoginForm({
     if (userId) {
       const access = await resolveAccountAccess(supabase, userId)
       if (access.blocked) {
-        toast.error(getSuspendedMessage(access.suspendReason))
+        toast.error(getSuspendedMessage(access.suspendReason), {
+          position: "top-center",
+        })
         await supabase.auth.signOut()
         setIsPending(false)
         return

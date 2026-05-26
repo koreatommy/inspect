@@ -5,7 +5,6 @@ import { buttonVariants } from "@/components/ui/button"
 import { getCurrentRole, requireUser } from "@/lib/auth/helpers"
 import { hasPermission } from "@/lib/auth/permissions"
 import { createClient } from "@/lib/supabase/server"
-import { formatKoreanMobilePhone } from "@/lib/validation/korean-phone"
 import { cn } from "@/lib/utils"
 
 import { PasswordChangeForm } from "../password-change-form"
@@ -18,18 +17,19 @@ export default async function SettingsAccountPage() {
   const supabase = await createClient()
   const { data } = await supabase
     .from("inspection_user_roles")
-    .select("display_name, phone")
+    .select("display_name, phone, organization")
     .eq("user_id", user.id)
     .maybeSingle()
   const displayName = data?.display_name ?? ""
   const phone = data?.phone ?? ""
+  const organization = data?.organization ?? ""
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold tracking-tight md:text-2xl">자기 정보</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          이름·전화번호·비밀번호를 변경할 수 있습니다.
+          이름·소속·전화번호·비밀번호를 변경할 수 있습니다.
         </p>
       </div>
 
@@ -40,9 +40,13 @@ export default async function SettingsAccountPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              이름과 전화번호를 수정할 수 있습니다.
+              이름, 소속, 전화번호를 수정할 수 있습니다.
             </p>
-            <ProfileUpdateForm displayName={displayName} phone={phone} />
+            <ProfileUpdateForm
+              displayName={displayName}
+              organization={organization}
+              phone={phone}
+            />
           </CardContent>
         </Card>
         <Card>
@@ -65,11 +69,6 @@ export default async function SettingsAccountPage() {
           </CardHeader>
           <CardContent>
             <PasswordChangeForm />
-            {phone ? (
-              <p className="mt-3 text-xs text-muted-foreground">
-                현재 등록된 번호: {formatKoreanMobilePhone(phone)}
-              </p>
-            ) : null}
           </CardContent>
         </Card>
       </div>

@@ -59,7 +59,7 @@ export function LandingPage() {
     }
 
     hasSuspendedToastRef.current = true
-    toast.error(getSuspendedMessage())
+    toast.error(getSuspendedMessage(), { position: "top-center" })
 
     const params = new URLSearchParams(searchParams.toString())
     params.delete("suspended")

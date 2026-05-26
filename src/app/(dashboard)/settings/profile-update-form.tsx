@@ -17,10 +17,15 @@ const initialState: ProfileUpdateState = {}
 
 type ProfileUpdateFormProps = {
   displayName: string
+  organization: string
   phone: string
 }
 
-export function ProfileUpdateForm({ displayName, phone }: ProfileUpdateFormProps) {
+export function ProfileUpdateForm({
+  displayName,
+  organization,
+  phone,
+}: ProfileUpdateFormProps) {
   const [state, formAction, isPending] = useActionState(
     updateMyProfileAction,
     initialState
@@ -41,6 +46,19 @@ export function ProfileUpdateForm({ displayName, phone }: ProfileUpdateFormProps
           maxLength={PERSON_NAME_MAX_LENGTH}
           pattern={PERSON_NAME_HTML_PATTERN}
           title="한글 또는 영문 이름만 입력할 수 있습니다 (2~30자)."
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <label htmlFor="organization" className="text-sm font-medium">
+          소속
+        </label>
+        <Input
+          id="organization"
+          name="organization"
+          autoComplete="organization"
+          defaultValue={organization}
+          placeholder="예: 서울시 시설안전팀"
           required
         />
       </div>

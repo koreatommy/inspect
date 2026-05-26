@@ -62,10 +62,14 @@ export async function updateMyProfileAction(
   formData: FormData
 ): Promise<ProfileUpdateState> {
   const displayName = String(formData.get("displayName") ?? "").trim()
+  const organization = String(formData.get("organization") ?? "").trim()
   const phoneRaw = String(formData.get("phone") ?? "").trim()
 
   if (!displayName) {
     return { error: "이름을 입력해 주세요." }
+  }
+  if (!organization) {
+    return { error: "소속을 입력해 주세요." }
   }
   const nameError = getPersonNameValidationError(displayName, "이름")
   if (nameError) {
@@ -90,7 +94,7 @@ export async function updateMyProfileAction(
 
   const { error } = await supabase
     .from("inspection_user_roles")
-    .update({ display_name: displayName, phone })
+    .update({ display_name: displayName, organization, phone })
     .eq("user_id", user.id)
 
   if (error) {

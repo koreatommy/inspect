@@ -3,6 +3,7 @@
 import {
   Building2,
   ClipboardCheck,
+  Database,
   FileUp,
   History,
   Home,
@@ -67,6 +68,7 @@ export function SidebarNav({ role, onLinkClick }: SidebarNavProps) {
     pathname === "/settings" ||
     (pathname.startsWith("/settings/") &&
       !pathname.startsWith("/settings/account"))
+  const dataManagementActive = pathname.startsWith("/admin/")
   const uploadActive = pathname.startsWith("/admin/upload")
   const settingsAccountActive = pathname.startsWith("/settings/account")
   const settingsUsersActive = pathname.startsWith("/settings/users")
@@ -103,6 +105,26 @@ export function SidebarNav({ role, onLinkClick }: SidebarNavProps) {
           )
         })}
 
+        {canUploadJson ? (
+          <div className="space-y-0.5 pt-2">
+            <div
+              className={navLinkClass(dataManagementActive)}
+              aria-current={dataManagementActive ? "true" : undefined}
+            >
+              <Database className="size-[18px] shrink-0" />
+              데이터 관리
+            </div>
+            <Link
+              href="/admin/upload"
+              onClick={onLinkClick}
+              className={cn(navLinkClass(uploadActive), "pl-10")}
+            >
+              <FileUp className="size-[18px] shrink-0" />
+              JSON 업로드
+            </Link>
+          </div>
+        ) : null}
+
         {canSettingsNav ? (
           <div className="space-y-0.5 pt-2">
             <Link
@@ -121,16 +143,6 @@ export function SidebarNav({ role, onLinkClick }: SidebarNavProps) {
               >
                 <UserCircle className="size-[18px] shrink-0" />
                 내정보 관리
-              </Link>
-            ) : null}
-            {canUploadJson ? (
-              <Link
-                href="/admin/upload"
-                onClick={onLinkClick}
-                className={cn(navLinkClass(uploadActive), "pl-10")}
-              >
-                <FileUp className="size-[18px] shrink-0" />
-                JSON 업로드
               </Link>
             ) : null}
             {canManageUsers ? (

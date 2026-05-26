@@ -85,8 +85,8 @@ export default async function SettingsUsersPage() {
                 역할별 기능 비교
               </h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                체크 표시는 해당 역할에서 사용 가능한 기능입니다. 신규 계정에는
-                시스템 관리자를 제외한 역할만 부여할 수 있습니다.
+                아래 표에서 역할별로 사용 가능한 기능을 한눈에 비교할 수
+                있습니다.
               </p>
             </div>
             <RolePermissionMatrix />
