@@ -36,7 +36,7 @@ const navigationItems: NavItem[] = [
     icon: ClipboardCheck,
     requiredPermission: "inspection:create",
   },
-  { href: "/inspections/history", label: "안전점검 이력", icon: History },
+  { href: "/inspections/history", label: "안전점검 대장", icon: History },
 ]
 
 function navLinkClass(active: boolean) {

@@ -35,7 +35,7 @@ export default async function InspectionHistoryPage({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold tracking-tight md:text-2xl">점검이력</h2>
+        <h2 className="text-xl font-bold tracking-tight md:text-2xl">안전점검 이력</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           시설번호와 점검월 기준으로 완료 및 작성중 이력을 조회합니다.
         </p>
