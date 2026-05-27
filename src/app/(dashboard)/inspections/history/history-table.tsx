@@ -15,9 +15,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getCurrentRole } from "@/lib/auth/helpers"
+import { DatasetNameBadge } from "@/components/dashboard/dataset-inspection-breakdown"
+import {
+  getAccessibleDatasets,
+  getCurrentRole,
+  getCurrentUser,
+} from "@/lib/auth/helpers"
 import { hasPermission } from "@/lib/auth/permissions"
 import { formatInspectionCompletedAt } from "@/lib/date"
+import { fetchDatasetNameMap } from "@/lib/dataset/names"
 import { getStatusBadge } from "@/lib/inspection/status"
 import { createClient } from "@/lib/supabase/server"
 import { cn } from "@/lib/utils"
@@ -42,14 +48,19 @@ export async function HistoryTable({
   const from = (currentPage - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
+  const user = await getCurrentUser()
   const role = await getCurrentRole()
   const canManageHistory = hasPermission(role, "settings:inspection-history-manage")
+  const accessibleDatasets = user
+    ? await getAccessibleDatasets(user.id, role)
+    : []
+  const showDatasetColumn = accessibleDatasets.length > 1
 
   const supabase = await createClient()
   let query = supabase
     .from("monthly_inspections")
     .select(
-      "id, facility_no, inspection_month, inspection_date, status, safety_manager_name, consigned_inspector_name, completed_at",
+      "id, facility_no, inspection_month, inspection_date, status, safety_manager_name, consigned_inspector_name, completed_at, dataset_id",
       { count: "exact" }
     )
     .order("inspection_date", { ascending: false })
@@ -65,6 +76,13 @@ export async function HistoryTable({
 
   const { data: inspections, count } = await query
   const totalCount = count ?? 0
+
+  const datasetNameById = showDatasetColumn
+    ? await fetchDatasetNameMap(
+        supabase,
+        (inspections ?? []).map((row) => row.dataset_id),
+      )
+    : new Map<string, string>()
 
   const paginationSearchParams: Record<string, string> = {}
   if (month) paginationSearchParams.month = month
@@ -99,6 +117,7 @@ export async function HistoryTable({
         <TableHeader>
           <TableRow>
             <TableHead>시설번호</TableHead>
+            {showDatasetColumn ? <TableHead>데이터셋</TableHead> : null}
             <TableHead>점검월</TableHead>
             <TableHead className="hidden sm:table-cell">점검일</TableHead>
             <TableHead>상태</TableHead>
@@ -121,6 +140,19 @@ export async function HistoryTable({
             return (
               <TableRow key={inspection.id}>
                 <TableCell className="font-mono text-xs">{inspection.facility_no}</TableCell>
+                {showDatasetColumn ? (
+                  <TableCell>
+                    {inspection.dataset_id ? (
+                      <DatasetNameBadge
+                        name={
+                          datasetNameById.get(inspection.dataset_id) ?? "알 수 없음"
+                        }
+                      />
+                    ) : (
+                      "-"
+                    )}
+                  </TableCell>
+                ) : null}
                 <TableCell>{inspection.inspection_month}</TableCell>
                 <TableCell className="hidden sm:table-cell">{inspection.inspection_date}</TableCell>
                 <TableCell>

@@ -42,14 +42,40 @@ const ORDER: ResultStatus[] = ["GOOD", "CAUTION", "REPAIR", "STOP_USE"]
 
 type MonthlyResultRealtimeChartProps = {
   inspectionMonth: string
+  /** 지정 시 해당 데이터셋 점검만 집계. 미지정 시 RLS 범위 전체 */
+  datasetIds?: string[]
 }
 
-async function fetchMonthlyCounts(inspectionMonth: string) {
+/** PostgREST Realtime 필터 (inspection_month + 선택적 dataset_id) */
+function buildInspectionRealtimeFilter(
+  inspectionMonth: string,
+  datasetIds?: string[],
+): string {
+  const parts: string[] = [`inspection_month.eq.${inspectionMonth}`]
+  if (datasetIds && datasetIds.length === 1) {
+    parts.push(`dataset_id.eq.${datasetIds[0]}`)
+  } else if (datasetIds && datasetIds.length > 1) {
+    parts.push(`dataset_id.in.(${datasetIds.join(",")})`)
+  }
+  if (parts.length === 1) return parts[0]!
+  return `and=(${parts.join(",")})`
+}
+
+async function fetchMonthlyCounts(
+  inspectionMonth: string,
+  datasetIds?: string[],
+) {
   const supabase = createClient()
-  const { data: inspections, error: inspectionError } = await supabase
+  let inspectionQuery = supabase
     .from("monthly_inspections")
     .select("id")
     .eq("inspection_month", inspectionMonth)
+
+  if (datasetIds && datasetIds.length > 0) {
+    inspectionQuery = inspectionQuery.in("dataset_id", datasetIds)
+  }
+
+  const { data: inspections, error: inspectionError } = await inspectionQuery
 
   if (inspectionError) throw inspectionError
 
@@ -87,6 +113,7 @@ async function fetchMonthlyCounts(inspectionMonth: string) {
 
 export function MonthlyResultRealtimeChart({
   inspectionMonth,
+  datasetIds,
 }: MonthlyResultRealtimeChartProps) {
   const [counts, setCounts] = useState<Record<ResultStatus, number>>({
     GOOD: 0,
@@ -97,9 +124,15 @@ export function MonthlyResultRealtimeChart({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const datasetKey = useMemo(
+    () => (datasetIds ?? []).slice().sort().join(","),
+    [datasetIds],
+  )
+
   const refresh = useCallback(async () => {
     try {
-      const next = await fetchMonthlyCounts(inspectionMonth)
+      const ids = datasetKey.length > 0 ? datasetKey.split(",") : undefined
+      const next = await fetchMonthlyCounts(inspectionMonth, ids)
       setCounts(next)
       setError(null)
     } catch (err) {
@@ -108,7 +141,7 @@ export function MonthlyResultRealtimeChart({
     } finally {
       setLoading(false)
     }
-  }, [inspectionMonth])
+  }, [inspectionMonth, datasetKey])
 
   useEffect(() => {
     const bootTimer = window.setTimeout(() => {
@@ -116,8 +149,12 @@ export function MonthlyResultRealtimeChart({
     }, 0)
 
     const supabase = createClient()
+    const ids = datasetKey.length > 0 ? datasetKey.split(",") : undefined
+    const inspectionFilter = buildInspectionRealtimeFilter(inspectionMonth, ids)
+    const channelSuffix = [inspectionMonth, datasetKey || "all"].join("-")
+
     const channel = supabase
-      .channel(`inspection-result-${inspectionMonth}`)
+      .channel(`inspection-result-${channelSuffix}`)
       .on(
         "postgres_changes",
         {
@@ -127,7 +164,7 @@ export function MonthlyResultRealtimeChart({
         },
         () => {
           void refresh()
-        }
+        },
       )
       .on(
         "postgres_changes",
@@ -135,15 +172,14 @@ export function MonthlyResultRealtimeChart({
           event: "*",
           schema: "public",
           table: "monthly_inspections",
-          filter: `inspection_month=eq.${inspectionMonth}`,
+          filter: inspectionFilter,
         },
         () => {
           void refresh()
-        }
+        },
       )
       .subscribe()
 
-    // Realtime이 비활성화된 환경에서도 일정 주기로 수치를 최신화합니다.
     const intervalId = window.setInterval(() => {
       void refresh()
     }, 15000)
@@ -153,7 +189,7 @@ export function MonthlyResultRealtimeChart({
       window.clearInterval(intervalId)
       void supabase.removeChannel(channel)
     }
-  }, [inspectionMonth, refresh])
+  }, [inspectionMonth, datasetKey, refresh])
 
   const chartData = useMemo<ChartItem[]>(
     () =>
@@ -163,7 +199,7 @@ export function MonthlyResultRealtimeChart({
         count: counts[status],
         color: COLOR_BY_STATUS[status],
       })),
-    [counts]
+    [counts],
   )
 
   const total = chartData.reduce((sum, item) => sum + item.count, 0)

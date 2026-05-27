@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 
+import { syncUserDatasetAssignments } from "@/lib/dataset/assignments"
+import { logDatasetAudit } from "@/lib/dataset/audit-log"
 import { getCurrentRole, getCurrentUser, hasRole } from "@/lib/auth/helpers"
 import { getPersonNameValidationError } from "@/lib/inspection/person-name"
 import { getServiceRoleClient } from "@/lib/supabase/admin"
@@ -231,6 +233,98 @@ export async function updateUserEmailByAdminAction(
 
   revalidatePath("/settings")
   revalidatePath("/settings/users")
+  return { success: true }
+}
+
+export type UpdateDatasetAssignmentsState = {
+  success?: boolean
+  error?: string
+}
+
+/**
+ * 사용자에게 할당된 데이터셋 목록을 폼 데이터(`datasetId` 다중 값)로 교체한다.
+ * - ADMIN 호출자만 가능.
+ * - active 상태가 아닌 데이터셋은 받지 않는다.
+ * - 기존 할당과 비교해 추가 insert + 삭제 delete.
+ */
+export async function updateUserDatasetAssignmentsAction(
+  _previousState: UpdateDatasetAssignmentsState,
+  formData: FormData,
+): Promise<UpdateDatasetAssignmentsState> {
+  const currentRole = await getCurrentRole()
+  if (!hasRole(currentRole, ["ADMIN"])) {
+    return { error: "관리자만 사용할 수 있습니다." }
+  }
+
+  const currentUser = await getCurrentUser()
+  if (!currentUser) {
+    return { error: "로그인이 필요합니다." }
+  }
+
+  const userId = String(formData.get("userId") ?? "").trim()
+  if (!userId) {
+    return { error: "사용자를 선택해 주세요." }
+  }
+
+  const requestedDatasetIds = formData
+    .getAll("datasetId")
+    .map((v) => String(v).trim())
+    .filter((v) => v.length > 0)
+
+  const supabase = await createClient()
+
+  // 입력된 dataset이 모두 active 상태인지 검증
+  if (requestedDatasetIds.length > 0) {
+    const { data: validDatasets, error: validateError } = await supabase
+      .from("facility_datasets")
+      .select("id")
+      .in("id", requestedDatasetIds)
+      .eq("status", "active")
+
+    if (validateError) {
+      return { error: "데이터셋 검증 중 오류가 발생했습니다." }
+    }
+
+    const validIds = new Set((validDatasets ?? []).map((d) => d.id))
+    const invalid = requestedDatasetIds.filter((id) => !validIds.has(id))
+    if (invalid.length > 0) {
+      return {
+        error:
+          "보관(archived)되었거나 존재하지 않는 데이터셋이 포함되어 있습니다.",
+      }
+    }
+  }
+
+  try {
+    const syncResult = await syncUserDatasetAssignments(
+      supabase,
+      userId,
+      requestedDatasetIds,
+      currentUser.id,
+    )
+
+    await logDatasetAudit(supabase, {
+      datasetId: null,
+      actorId: currentUser.id,
+      action: "user_assignments_sync",
+      details: {
+        scope: "user",
+        targetUserId: userId,
+        requestedDatasetIds,
+        inserted: syncResult.inserted,
+        deleted: syncResult.deleted,
+      },
+    })
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error ? err.message : "데이터셋 할당에 실패했습니다.",
+    }
+  }
+
+  revalidatePath("/settings")
+  revalidatePath("/settings/users")
+  revalidatePath("/admin/datasets")
   return { success: true }
 }
 

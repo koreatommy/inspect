@@ -27,6 +27,10 @@ import {
   type UpdateEmailState,
   type UpdateRoleState,
 } from "./user-actions"
+import {
+  UserDatasetAssignmentCell,
+  type DatasetOption,
+} from "./user-dataset-assignment-cell"
 
 const ASSIGNABLE_ROLES: AppRole[] = ["MANAGER", "INSPECTOR", "VIEWER"]
 
@@ -51,7 +55,13 @@ type UserRow = {
   suspend_reason: string | null
 }
 
-function RoleChangeRow({ user }: { user: UserRow }) {
+type RowProps = {
+  user: UserRow
+  datasets: DatasetOption[]
+  assignedDatasetIds: string[]
+}
+
+function RoleChangeRow({ user, datasets, assignedDatasetIds }: RowProps) {
   const initialState: UpdateRoleState = {}
   const [state, formAction, isPending] = useActionState(
     updateUserRoleAction,
@@ -143,6 +153,14 @@ function RoleChangeRow({ user }: { user: UserRow }) {
         )}
       </TableCell>
       <TableCell>
+        <UserDatasetAssignmentCell
+          userId={user.user_id}
+          datasets={datasets}
+          assignedDatasetIds={assignedDatasetIds}
+          isAdminTarget={user.role === "ADMIN"}
+        />
+      </TableCell>
+      <TableCell>
         <UserAccountControls
           user={{
             user_id: user.user_id,
@@ -157,7 +175,18 @@ function RoleChangeRow({ user }: { user: UserRow }) {
   )
 }
 
-export function UserManagementTable({ users }: { users: UserRow[] }) {
+type UserManagementTableProps = {
+  users: UserRow[]
+  datasets: DatasetOption[]
+  /** user_id -> [dataset_id, ...] */
+  assignmentsByUserId: Record<string, string[]>
+}
+
+export function UserManagementTable({
+  users,
+  datasets,
+  assignmentsByUserId,
+}: UserManagementTableProps) {
   if (users.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">등록된 사용자가 없습니다.</p>
@@ -176,12 +205,18 @@ export function UserManagementTable({ users }: { users: UserRow[] }) {
           <TableHead>현재 역할</TableHead>
           <TableHead>이메일 변경</TableHead>
           <TableHead>역할 변경</TableHead>
+          <TableHead>데이터셋 할당</TableHead>
           <TableHead>계정 관리</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {users.map((user) => (
-          <RoleChangeRow key={user.user_id} user={user} />
+          <RoleChangeRow
+            key={user.user_id}
+            user={user}
+            datasets={datasets}
+            assignedDatasetIds={assignmentsByUserId[user.user_id] ?? []}
+          />
         ))}
       </TableBody>
     </Table>

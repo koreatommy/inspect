@@ -98,3 +98,56 @@ export async function requirePermission(
 
   return role
 }
+
+export type AccessibleDataset = {
+  id: string
+  name: string
+  facility_count: number
+}
+
+/**
+ * 사용자가 접근 가능한 active 데이터셋 목록.
+ *  - ADMIN: 모든 status='active' 데이터셋
+ *  - 그 외: user_dataset_assignments + status='active' 교집합
+ */
+export async function getAccessibleDatasets(
+  userId: string,
+  role: AppRole,
+): Promise<AccessibleDataset[]> {
+  const supabase = await createClient()
+
+  if (role === "ADMIN") {
+    const { data } = await supabase
+      .from("facility_datasets")
+      .select("id,name,facility_count")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+    return data ?? []
+  }
+
+  const { data: assigned } = await supabase
+    .from("user_dataset_assignments")
+    .select("dataset_id")
+    .eq("user_id", userId)
+
+  const ids = (assigned ?? []).map((row) => row.dataset_id)
+  if (ids.length === 0) return []
+
+  const { data: datasets } = await supabase
+    .from("facility_datasets")
+    .select("id,name,facility_count")
+    .in("id", ids)
+    .eq("status", "active")
+    .order("name", { ascending: true })
+
+  return datasets ?? []
+}
+
+/** id만 필요한 경우의 단축 헬퍼 */
+export async function getAccessibleDatasetIds(
+  userId: string,
+  role: AppRole,
+): Promise<string[]> {
+  const datasets = await getAccessibleDatasets(userId, role)
+  return datasets.map((d) => d.id)
+}

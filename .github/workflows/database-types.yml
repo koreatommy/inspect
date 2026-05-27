@@ -1,0 +1,38 @@
+name: Database types
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "supabase/migrations/**"
+      - "src/types/database.generated.ts"
+      - ".github/workflows/database-types.yml"
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "src/types/database.generated.ts"
+      - ".github/workflows/database-types.yml"
+
+jobs:
+  check-generated-types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Verify generated database types
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: npm run check:types

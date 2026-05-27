@@ -2,8 +2,19 @@
 
 import { useCallback, useEffect, useState } from "react"
 
-import { Cloud, CloudFog, CloudRain, CloudSnow, Loader2, MapPin, Sun, Zap } from "lucide-react"
+import {
+  Cloud,
+  CloudFog,
+  CloudRain,
+  CloudSnow,
+  Loader2,
+  MapPin,
+  RefreshCw,
+  Sun,
+  Zap,
+} from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import { weatherCodeToKo } from "@/lib/weather/wmo-weather-label"
 import { cn } from "@/lib/utils"
 
@@ -74,74 +85,99 @@ export function WeatherWidget({ className }: { className?: string }) {
     | { status: "ok"; data: WeatherPayload }
     | { status: "error"; message: string }
   >({ status: "loading" })
+  const [refreshing, setRefreshing] = useState(false)
 
-  const load = useCallback(async (lat: number, lon: number, usedGeolocation: boolean) => {
-    setState({ status: "loading" })
-    try {
-      const [meteoRes, placeLabel] = await Promise.all([
-        fetchOpenMeteoCurrent(lat, lon),
-        reversePlaceLabel(lat, lon),
-      ])
-      if (!meteoRes.ok) {
-        setState({ status: "error", message: "날씨 정보를 불러오지 못했습니다." })
-        return
+  const load = useCallback(
+    async (lat: number, lon: number, usedGeolocation: boolean, isRefresh = false) => {
+      if (!isRefresh) {
+        setState({ status: "loading" })
+      } else {
+        setRefreshing(true)
       }
-      const json = (await meteoRes.json()) as {
-        current?: {
-          temperature_2m?: number
-          weather_code?: number
-          wind_speed_10m?: number
-          relative_humidity_2m?: number
+      try {
+        const [meteoRes, placeLabel] = await Promise.all([
+          fetchOpenMeteoCurrent(lat, lon),
+          reversePlaceLabel(lat, lon),
+        ])
+        if (!meteoRes.ok) {
+          setState({ status: "error", message: "날씨 정보를 불러오지 못했습니다." })
+          return
+        }
+        const json = (await meteoRes.json()) as {
+          current?: {
+            temperature_2m?: number
+            weather_code?: number
+            wind_speed_10m?: number
+            relative_humidity_2m?: number
+          }
+        }
+        const cur = json.current
+        if (
+          cur?.temperature_2m === undefined ||
+          cur.weather_code === undefined ||
+          cur.wind_speed_10m === undefined ||
+          cur.relative_humidity_2m === undefined
+        ) {
+          setState({ status: "error", message: "날씨 응답 형식이 올바르지 않습니다." })
+          return
+        }
+        setState({
+          status: "ok",
+          data: {
+            tempC: Math.round(cur.temperature_2m * 10) / 10,
+            weatherCode: cur.weather_code,
+            windKmh: Math.round(cur.wind_speed_10m * 10) / 10,
+            humidity: Math.round(cur.relative_humidity_2m),
+            placeLabel,
+            usedGeolocation,
+          },
+        })
+      } catch {
+        setState({ status: "error", message: "네트워크 오류가 발생했습니다." })
+      } finally {
+        if (isRefresh) {
+          setRefreshing(false)
         }
       }
-      const cur = json.current
-      if (
-        cur?.temperature_2m === undefined ||
-        cur.weather_code === undefined ||
-        cur.wind_speed_10m === undefined ||
-        cur.relative_humidity_2m === undefined
-      ) {
-        setState({ status: "error", message: "날씨 응답 형식이 올바르지 않습니다." })
+    },
+    [],
+  )
+
+  const requestCurrentLocation = useCallback(
+    (forceFresh: boolean) => {
+      const scheduleLoad = (lat: number, lon: number, usedGeolocation: boolean) => {
+        void load(lat, lon, usedGeolocation, forceFresh)
+      }
+
+      if (typeof navigator === "undefined" || !navigator.geolocation) {
+        scheduleLoad(SEOUL_LAT, SEOUL_LON, false)
         return
       }
-      setState({
-        status: "ok",
-        data: {
-          tempC: Math.round(cur.temperature_2m * 10) / 10,
-          weatherCode: cur.weather_code,
-          windKmh: Math.round(cur.wind_speed_10m * 10) / 10,
-          humidity: Math.round(cur.relative_humidity_2m),
-          placeLabel,
-          usedGeolocation,
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          scheduleLoad(pos.coords.latitude, pos.coords.longitude, true)
         },
-      })
-    } catch {
-      setState({ status: "error", message: "네트워크 오류가 발생했습니다." })
-    }
-  }, [])
+        () => {
+          scheduleLoad(SEOUL_LAT, SEOUL_LON, false)
+        },
+        {
+          enableHighAccuracy: forceFresh,
+          maximumAge: forceFresh ? 0 : 300_000,
+          timeout: 12_000,
+        },
+      )
+    },
+    [load],
+  )
 
   useEffect(() => {
-    const scheduleLoad = (lat: number, lon: number, usedGeolocation: boolean) => {
-      queueMicrotask(() => {
-        void load(lat, lon, usedGeolocation)
-      })
-    }
+    requestCurrentLocation(false)
+  }, [requestCurrentLocation])
 
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      scheduleLoad(SEOUL_LAT, SEOUL_LON, false)
-      return
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        scheduleLoad(pos.coords.latitude, pos.coords.longitude, true)
-      },
-      () => {
-        scheduleLoad(SEOUL_LAT, SEOUL_LON, false)
-      },
-      { enableHighAccuracy: false, maximumAge: 300_000, timeout: 12_000 }
-    )
-  }, [load])
+  const handleRefreshLocation = useCallback(() => {
+    requestCurrentLocation(true)
+  }, [requestCurrentLocation])
 
   if (state.status === "loading") {
     return (
@@ -163,12 +199,27 @@ export function WeatherWidget({ className }: { className?: string }) {
     return (
       <div
         className={cn(
-          "mt-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground",
-          className
+          "mt-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground",
+          className,
         )}
         role="alert"
       >
-        {state.message}
+        <span>{state.message}</span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleRefreshLocation}
+          disabled={refreshing}
+          className="shrink-0"
+        >
+          {refreshing ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+          ) : (
+            <RefreshCw className="size-4" aria-hidden />
+          )}
+          현위치 새로고침
+        </Button>
       </div>
     )
   }
@@ -203,6 +254,23 @@ export function WeatherWidget({ className }: { className?: string }) {
           </p>
         </div>
       </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={handleRefreshLocation}
+        disabled={refreshing}
+        className="shrink-0"
+        aria-label="현위치 새로고침"
+      >
+        {refreshing ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden />
+        ) : (
+          <RefreshCw className="size-4" aria-hidden />
+        )}
+        <span className="hidden sm:inline">현위치 새로고침</span>
+        <span className="sm:hidden">새로고침</span>
+      </Button>
     </div>
   )
 }

@@ -1,0 +1,1 @@
+export const MEMBERSHIP_PAGE_SIZE = 25

@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { DatasetNameBadge } from "@/components/dashboard/dataset-inspection-breakdown"
 import { getStatusBadge } from "@/lib/inspection/status"
 import { cn } from "@/lib/utils"
 
@@ -19,12 +20,21 @@ type Inspection = {
   id: string
   facility_no: string
   facility_name: string | null
+  dataset_name: string | null
   inspection_month: string
   inspection_date: string | null
   status: string
 }
 
-export function RecentInspections({ inspections }: { inspections: Inspection[] }) {
+type RecentInspectionsProps = {
+  inspections: Inspection[]
+  showDatasetColumn?: boolean
+}
+
+export function RecentInspections({
+  inspections,
+  showDatasetColumn = false,
+}: RecentInspectionsProps) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between pb-2">
@@ -42,6 +52,7 @@ export function RecentInspections({ inspections }: { inspections: Inspection[] }
             <TableHeader>
               <TableRow>
                 <TableHead>시설번호</TableHead>
+                {showDatasetColumn ? <TableHead>데이터셋</TableHead> : null}
                 <TableHead>점검월</TableHead>
                 <TableHead className="hidden sm:table-cell">점검일</TableHead>
                 <TableHead>상태</TableHead>
@@ -64,6 +75,15 @@ export function RecentInspections({ inspections }: { inspections: Inspection[] }
                         </span>
                       </div>
                     </TableCell>
+                    {showDatasetColumn ? (
+                      <TableCell>
+                        {inspection.dataset_name ? (
+                          <DatasetNameBadge name={inspection.dataset_name} />
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                    ) : null}
                     <TableCell>{inspection.inspection_month}</TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {inspection.inspection_date ?? "-"}

@@ -3,6 +3,12 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/database"
 import { mapEquipment, mapFacility, mapRelatedFacilitySections } from "./mapper"
 import {
+  deactivateMissingMemberships,
+  refreshDatasetMetadata,
+  syncFacilitiesActiveFlag,
+  upsertActiveMembership,
+} from "./membership-sync"
+import {
   normalizeFacilityPayload,
   validateFacilityJson,
   type FacilityJson,
@@ -18,29 +24,49 @@ export type UploadResult = {
   total: number
   success: number
   failed: number
+  datasetId: string
   newFacilities: number
   updatedFacilities: number
   newEquipment: number
   updatedEquipment: number
   deactivatedEquipment: number
+  newMemberships: number
+  reactivatedMemberships: number
+  retainedMemberships: number
+  deactivatedMemberships: number
+  deactivatedFacilities: number
+  reactivatedFacilities: number
   failures: UploadFailure[]
 }
 
-const emptyResult = (): UploadResult => ({
+export type UploadOptions = {
+  datasetId: string
+  sourceFile?: string | null
+  uploadedBy?: string | null
+}
+
+const emptyResult = (datasetId: string): UploadResult => ({
   total: 0,
   success: 0,
   failed: 0,
+  datasetId,
   newFacilities: 0,
   updatedFacilities: 0,
   newEquipment: 0,
   updatedEquipment: 0,
   deactivatedEquipment: 0,
+  newMemberships: 0,
+  reactivatedMemberships: 0,
+  retainedMemberships: 0,
+  deactivatedMemberships: 0,
+  deactivatedFacilities: 0,
+  reactivatedFacilities: 0,
   failures: [],
 })
 
 async function syncRelatedSections(
   supabase: SupabaseClient<Database>,
-  json: FacilityJson
+  json: FacilityJson,
 ) {
   const facilityNo = json.basic.pfctSn
   const related = mapRelatedFacilitySections(json)
@@ -85,12 +111,12 @@ async function syncRelatedSections(
 async function syncEquipment(
   supabase: SupabaseClient<Database>,
   json: FacilityJson,
-  result: UploadResult
+  result: UploadResult,
 ) {
   const facilityNo = json.basic.pfctSn
   const equipmentRows = mapEquipment(json)
   const incomingEquipmentNos = new Set(
-    equipmentRows.map((equipment) => equipment.equipment_no)
+    equipmentRows.map((equipment) => equipment.equipment_no),
   )
 
   const { data: existingEquipment } = await supabase
@@ -99,7 +125,7 @@ async function syncEquipment(
     .eq("facility_no", facilityNo)
 
   const existingNos = new Set(
-    existingEquipment?.map((equipment) => equipment.equipment_no) ?? []
+    existingEquipment?.map((equipment) => equipment.equipment_no) ?? [],
   )
 
   if (equipmentRows.length > 0) {
@@ -121,7 +147,7 @@ async function syncEquipment(
   }
 
   const missingEquipmentNos = [...existingNos].filter(
-    (equipmentNo) => !incomingEquipmentNos.has(equipmentNo)
+    (equipmentNo) => !incomingEquipmentNos.has(equipmentNo),
   )
 
   for (const equipmentNo of missingEquipmentNos) {
@@ -142,7 +168,8 @@ async function syncEquipment(
 async function uploadFacility(
   supabase: SupabaseClient<Database>,
   json: FacilityJson,
-  result: UploadResult
+  datasetId: string,
+  result: UploadResult,
 ) {
   const facilityNo = json.basic.pfctSn
 
@@ -166,17 +193,26 @@ async function uploadFacility(
     result.newFacilities += 1
   }
 
+  // 데이터셋 멤버십을 활성으로 upsert. (Phase 3 핵심 추가)
+  await upsertActiveMembership(supabase, facilityNo, datasetId, result)
+
   await syncEquipment(supabase, json, result)
   await syncRelatedSections(supabase, json)
 }
 
 export async function uploadFacilityJson(
   supabase: SupabaseClient<Database>,
-  input: unknown
-) {
-  const result = emptyResult()
+  input: unknown,
+  options: UploadOptions,
+): Promise<UploadResult> {
+  const { datasetId, sourceFile = null, uploadedBy = null } = options
+  const result = emptyResult(datasetId)
   const payload = normalizeFacilityPayload(input)
   result.total = payload.length
+
+  // 멤버십 동기화: JSON에 포함된 시설(검증 통과) 기준. 업로드 실패 시설은 비활성 대상에서 제외.
+  const successfullyUploadedFacilityNos = new Set<string>()
+  const facilityNosInJson = new Set<string>()
 
   for (const [index, item] of payload.entries()) {
     const validated = validateFacilityJson(item)
@@ -187,8 +223,11 @@ export async function uploadFacilityJson(
       continue
     }
 
+    facilityNosInJson.add(validated.data.basic.pfctSn)
+
     try {
-      await uploadFacility(supabase, validated.data, result)
+      await uploadFacility(supabase, validated.data, datasetId, result)
+      successfullyUploadedFacilityNos.add(validated.data.basic.pfctSn)
       result.success += 1
     } catch (error) {
       result.failed += 1
@@ -198,6 +237,36 @@ export async function uploadFacilityJson(
         reason: error instanceof Error ? error.message : "업로드 실패",
       })
     }
+  }
+
+  // 후처리: 동기화·보정·메타 갱신. 일부 실패가 있어도 성공한 시설 기준으로 진행한다.
+  try {
+    const { deactivatedMemberships, affectedFacilityNos } =
+      await deactivateMissingMemberships(
+        supabase,
+        datasetId,
+        facilityNosInJson,
+      )
+    result.deactivatedMemberships = deactivatedMemberships
+
+    const { deactivatedFacilities, reactivatedFacilities } =
+      await syncFacilitiesActiveFlag(
+        supabase,
+        [...successfullyUploadedFacilityNos],
+        affectedFacilityNos,
+      )
+    result.deactivatedFacilities = deactivatedFacilities
+    result.reactivatedFacilities = reactivatedFacilities
+
+    await refreshDatasetMetadata(supabase, datasetId, sourceFile, uploadedBy)
+  } catch (error) {
+    result.failures.push({
+      index: -1,
+      reason:
+        error instanceof Error
+          ? `데이터셋 동기화 후처리 실패: ${error.message}`
+          : "데이터셋 동기화 후처리 실패",
+    })
   }
 
   return result

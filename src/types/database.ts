@@ -79,8 +79,59 @@ export type MonthlyInspectionRow = {
   special_note_summary: string | null
   completed_at: string | null
   created_by: string | null
+  dataset_id: string
   created_at: string
   updated_at: string
+}
+
+export type FacilityDatasetRow = {
+  id: string
+  name: string
+  description: string | null
+  source_file: string | null
+  uploaded_by: string | null
+  facility_count: number
+  status: "active" | "archived"
+  created_at: string
+  updated_at: string
+}
+
+export type FacilityDatasetMembershipRow = {
+  id: string
+  facility_no: string
+  dataset_id: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type UserDatasetAssignmentRow = {
+  id: string
+  user_id: string
+  dataset_id: string
+  assigned_by: string | null
+  created_at: string
+}
+
+export type FacilityDatasetUploadRow = {
+  id: string
+  dataset_id: string
+  source_file: string | null
+  uploaded_by: string | null
+  total_count: number
+  success_count: number
+  failed_count: number
+  result_summary: Json
+  created_at: string
+}
+
+export type DatasetAuditLogRow = {
+  id: string
+  dataset_id: string | null
+  actor_id: string | null
+  action: "upload" | "archive" | "activate" | "user_assignments_sync"
+  details: Json
+  created_at: string
 }
 
 export type MonthlyInspectionItemRow = {
@@ -196,6 +247,11 @@ export type Database = {
       monthly_inspections: TableDefinition<MonthlyInspectionRow>
       monthly_inspection_items: TableDefinition<MonthlyInspectionItemRow>
       inspection_ledger_rows: TableDefinition<LedgerRow>
+      facility_datasets: TableDefinition<FacilityDatasetRow>
+      facility_dataset_memberships: TableDefinition<FacilityDatasetMembershipRow>
+      user_dataset_assignments: TableDefinition<UserDatasetAssignmentRow>
+      facility_dataset_uploads: TableDefinition<FacilityDatasetUploadRow>
+      dataset_audit_log: TableDefinition<DatasetAuditLogRow>
       inspection_user_roles: TableDefinition<{
         user_id: string
         role: "ADMIN" | "MANAGER" | "INSPECTOR" | "VIEWER"

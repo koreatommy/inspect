@@ -1,10 +1,12 @@
 "use client"
 
 import {
+  BookOpen,
   Building2,
   ClipboardCheck,
   Database,
   FileUp,
+  FolderKanban,
   History,
   Home,
   Settings,
@@ -70,8 +72,13 @@ export function SidebarNav({ role, onLinkClick }: SidebarNavProps) {
       !pathname.startsWith("/settings/account"))
   const dataManagementActive = pathname.startsWith("/admin/")
   const uploadActive = pathname.startsWith("/admin/upload")
+  const datasetsActive = pathname.startsWith("/admin/datasets")
+  const inactiveFacilitiesActive = pathname.startsWith(
+    "/admin/facilities/inactive",
+  )
   const settingsAccountActive = pathname.startsWith("/settings/account")
   const settingsUsersActive = pathname.startsWith("/settings/users")
+  const manualActive = pathname.startsWith("/manual")
 
   return (
     <>
@@ -122,11 +129,27 @@ export function SidebarNav({ role, onLinkClick }: SidebarNavProps) {
               <FileUp className="size-[18px] shrink-0" />
               JSON 업로드
             </Link>
+            <Link
+              href="/admin/datasets"
+              onClick={onLinkClick}
+              className={cn(navLinkClass(datasetsActive), "pl-10")}
+            >
+              <FolderKanban className="size-[18px] shrink-0" />
+              데이터셋 관리
+            </Link>
+            <Link
+              href="/admin/facilities/inactive"
+              onClick={onLinkClick}
+              className={cn(navLinkClass(inactiveFacilitiesActive), "pl-10")}
+            >
+              <Building2 className="size-[18px] shrink-0" />
+              비활성 시설
+            </Link>
           </div>
         ) : null}
 
-        {canSettingsNav ? (
-          <div className="space-y-0.5 pt-2">
+        <div className="space-y-0.5 pt-2">
+          {canSettingsNav ? (
             <Link
               href="/settings"
               onClick={onLinkClick}
@@ -135,28 +158,39 @@ export function SidebarNav({ role, onLinkClick }: SidebarNavProps) {
               <Settings className="size-[18px] shrink-0" />
               설정
             </Link>
-            {hasPermission(role, "settings:account") ? (
-              <Link
-                href="/settings/account"
-                onClick={onLinkClick}
-                className={cn(navLinkClass(settingsAccountActive), "pl-10")}
-              >
-                <UserCircle className="size-[18px] shrink-0" />
-                내정보 관리
-              </Link>
-            ) : null}
-            {canManageUsers ? (
-              <Link
-                href="/settings/users"
-                onClick={onLinkClick}
-                className={cn(navLinkClass(settingsUsersActive), "pl-10")}
-              >
-                <Users className="size-[18px] shrink-0" />
-                사용자 관리
-              </Link>
-            ) : null}
-          </div>
-        ) : null}
+          ) : null}
+          {canSettingsNav && hasPermission(role, "settings:account") ? (
+            <Link
+              href="/settings/account"
+              onClick={onLinkClick}
+              className={cn(navLinkClass(settingsAccountActive), "pl-10")}
+            >
+              <UserCircle className="size-[18px] shrink-0" />
+              내정보 관리
+            </Link>
+          ) : null}
+          {canSettingsNav && canManageUsers ? (
+            <Link
+              href="/settings/users"
+              onClick={onLinkClick}
+              className={cn(navLinkClass(settingsUsersActive), "pl-10")}
+            >
+              <Users className="size-[18px] shrink-0" />
+              사용자 관리
+            </Link>
+          ) : null}
+          <Link
+            href="/manual"
+            onClick={onLinkClick}
+            className={cn(
+              navLinkClass(manualActive),
+              canSettingsNav ? "pl-10" : undefined,
+            )}
+          >
+            <BookOpen className="size-[18px] shrink-0" />
+            사용자 매뉴얼
+          </Link>
+        </div>
       </nav>
     </>
   )

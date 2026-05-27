@@ -6,10 +6,12 @@ import {
   elevatedKeySetupHint,
   resolveElevatedSupabaseKey,
 } from "@/lib/supabase/service-key"
+import { createClient } from "@/lib/supabase/server"
 
 import { CreateUserForm } from "../create-user-form"
 import { RolePermissionMatrix } from "../role-permission-matrix"
 import { UserManagementTable } from "../user-management-table"
+import type { DatasetOption } from "../user-dataset-assignment-cell"
 
 export default async function SettingsUsersPage() {
   await requirePermission("user:manage", "/settings")
@@ -45,6 +47,25 @@ export default async function SettingsUsersPage() {
       }
       users = result.users
     }
+  }
+
+  // 데이터셋 + 할당 정보 (RLS는 ADMIN 호출자 권한으로 자동 통과)
+  const supabase = await createClient()
+  const [datasetsRes, assignmentsRes] = await Promise.all([
+    supabase
+      .from("facility_datasets")
+      .select("id,name")
+      .eq("status", "active")
+      .order("name", { ascending: true }),
+    supabase.from("user_dataset_assignments").select("user_id,dataset_id"),
+  ])
+
+  const datasets: DatasetOption[] = datasetsRes.data ?? []
+  const assignmentsByUserId: Record<string, string[]> = {}
+  for (const row of assignmentsRes.data ?? []) {
+    const list = assignmentsByUserId[row.user_id] ?? []
+    list.push(row.dataset_id)
+    assignmentsByUserId[row.user_id] = list
   }
 
   return (
@@ -94,7 +115,11 @@ export default async function SettingsUsersPage() {
           {!missingServiceRole && !publishableKeyMistake ? (
             <CreateUserForm />
           ) : null}
-          <UserManagementTable users={users} />
+          <UserManagementTable
+            users={users}
+            datasets={datasets}
+            assignmentsByUserId={assignmentsByUserId}
+          />
         </CardContent>
       </Card>
     </div>

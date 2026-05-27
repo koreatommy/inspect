@@ -47,5 +47,9 @@ next-env.d.ts
 # local credentials memo (never commit)
 /admin
 
+# postgres password file (never commit)
+.pgpass
+.pgpass.md
+
 # dev screenshots
 quiz-confetti*.png
