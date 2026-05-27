@@ -85,12 +85,17 @@ export function MonthlyInspectionTrendChart({ data }: { data: MonthlyData[] }) {
 }
 
 export function StatusDonutChart({ data }: { data: StatusData[] }) {
-  const total = data.reduce((sum, d) => sum + d.value, 0)
+  const inspectionTotal = data
+    .filter((d) => d.name !== "미완료")
+    .reduce((sum, d) => sum + d.value, 0)
 
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base">이번 달 점검 상태</CardTitle>
+        <p className="text-xs text-muted-foreground">
+          완료·작성중은 점검 건수, 미완료는 멤버십 시설 수 기준입니다.
+        </p>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
@@ -138,9 +143,9 @@ export function StatusDonutChart({ data }: { data: StatusData[] }) {
               </div>
             ))}
             <div className="flex items-center border-t pt-2">
-              <span className="text-sm text-muted-foreground">합계</span>
+              <span className="text-sm text-muted-foreground">점검 합계</span>
               <span className="ml-auto text-sm font-semibold tabular-nums">
-                {total}
+                {inspectionTotal}
               </span>
             </div>
           </div>

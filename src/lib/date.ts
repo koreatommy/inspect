@@ -1,3 +1,58 @@
+const MONTH_VALUE_RE = /^(\d{4})-(\d{2})$/
+const DATE_VALUE_RE = /^(\d{4})-(\d{2})-(\d{2})$/
+
+export function parseMonthValue(value: string) {
+  const match = MONTH_VALUE_RE.exec(value.trim())
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  if (month < 1 || month > 12) return null
+  return { year, month }
+}
+
+export function toMonthValue(year: number, month: number) {
+  return `${year}-${String(month).padStart(2, "0")}`
+}
+
+export function formatMonthLabel(value: string) {
+  const parsed = parseMonthValue(value)
+  if (!parsed) return ""
+  return `${parsed.year}년 ${parsed.month}월`
+}
+
+export function parseDateValue(value: string) {
+  const match = DATE_VALUE_RE.exec(value.trim())
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const date = new Date(year, month - 1, day)
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null
+  }
+  return date
+}
+
+export function toDateValue(date: Date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, "0")
+  const d = String(date.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
+export function formatDateLabel(value: string) {
+  const parsed = parseDateValue(value)
+  if (!parsed) return ""
+  const y = parsed.getFullYear()
+  const m = String(parsed.getMonth() + 1).padStart(2, "0")
+  const d = String(parsed.getDate()).padStart(2, "0")
+  return `${y}. ${m}. ${d}.`
+}
+
 export function getKoreaDateParts(date = new Date()) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Seoul",

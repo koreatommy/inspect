@@ -86,10 +86,28 @@ export const manualTocItems: ManualTocItem[] = [
     keywords: ["이력", "히스토리"],
   },
   {
-    id: "user-permissions",
-    title: "사용자 및 권한 관리",
-    description: "역할별 접근 범위와 사용자 초대",
-    keywords: ["사용자", "권한", "역할"],
+    id: "user-permissions-overview",
+    title: "사용자 및 권한 · 개요",
+    description: "4가지 역할과 권한 체계 소개",
+    keywords: ["사용자", "권한", "역할", "시스템 관리자", "안전관리자"],
+  },
+  {
+    id: "user-permissions-matrix",
+    title: "역할별 기능 비교",
+    description: "시설·점검·계정 기능을 역할별로 비교",
+    keywords: ["권한", "비교", "기능", "표"],
+  },
+  {
+    id: "user-permissions-policy",
+    title: "권한 제한 및 정책",
+    description: "역할별 제한 사항과 계정 부여 정책",
+    keywords: ["제한", "정책", "서명", "역할"],
+  },
+  {
+    id: "user-management",
+    title: "사용자 계정 관리",
+    description: "계정 생성·역할 변경·일시 정지(관리자)",
+    keywords: ["사용자", "초대", "계정", "정지"],
   },
   {
     id: "data-export",
@@ -183,6 +201,7 @@ export const manualUpdateHistory: UpdateEntry[] = [
       "시설정보 데이터셋 사용자화 관련 안내 추가",
       "점검 작성 단계별 가이드 및 FAQ 반영",
       "사진 첨부·AI 보고서 미구현 상태를 「기능 추가 예정」으로 명시",
+      "역할별 기능 비교표·권한 정책을 매뉴얼 목차(사용자 및 권한)로 분리 반영",
     ],
   },
 ]

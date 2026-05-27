@@ -4,7 +4,9 @@ import { redirect } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { DatePickerField } from "@/components/ui/date-picker-field"
 import { Input } from "@/components/ui/input"
+import { MonthPickerField } from "@/components/ui/month-picker-field"
 import {
   getAccessibleDatasets,
   getCurrentRole,
@@ -469,11 +471,12 @@ export default async function NewInspectionPage({
                   <label htmlFor="inspectionMonth" className="text-sm font-medium">
                     점검월
                   </label>
-                  <Input
+                  <MonthPickerField
                     id="inspectionMonth"
                     name="inspectionMonth"
-                    type="month"
                     defaultValue={thisMonth()}
+                    clearable={false}
+                    required
                   />
                   <p className="text-xs text-muted-foreground">
                     동일 시설·동일 데이터셋·동일 점검월에 이미 점검이 있으면
@@ -484,11 +487,12 @@ export default async function NewInspectionPage({
                   <label htmlFor="inspectionDate" className="text-sm font-medium">
                     점검일
                   </label>
-                  <Input
+                  <DatePickerField
                     id="inspectionDate"
                     name="inspectionDate"
-                    type="date"
                     defaultValue={today()}
+                    clearable={false}
+                    required
                   />
                 </div>
               </div>

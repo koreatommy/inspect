@@ -14,6 +14,7 @@ import {
 import { groupInspectionsByDataset } from "@/lib/dataset/inspection-stats"
 import { fetchDatasetNameMap } from "@/lib/dataset/names"
 import { getKoreaDateParts } from "@/lib/date"
+import { countFacilitiesByMonthlyStatus } from "@/lib/facilities/monthly-status"
 import { createClient } from "@/lib/supabase/server"
 
 export async function DashboardContent() {
@@ -39,7 +40,8 @@ export async function DashboardContent() {
     { data: recentInspections },
     { data: monthlyStats },
     { data: currentMonthByDataset },
-    { count: needsRevisionCount },
+    { data: currentMonthInspections },
+    { data: memberships },
   ] = await Promise.all([
     supabase.from("facilities").select("*", { count: "exact", head: true }),
     supabase
@@ -69,10 +71,24 @@ export async function DashboardContent() {
       .eq("inspection_month", month),
     supabase
       .from("monthly_inspections")
-      .select("*", { count: "exact", head: true })
-      .eq("inspection_month", month)
-      .eq("status", "needs_revision"),
+      .select("facility_no, dataset_id, status")
+      .eq("inspection_month", month),
+    supabase
+      .from("facility_dataset_memberships")
+      .select("facility_no, dataset_id")
+      .eq("is_active", true),
   ])
+
+  const monthlyInspectionRows = (currentMonthInspections ?? [])
+    .filter((row) => row.dataset_id != null)
+    .map((row) => ({
+      facility_no: row.facility_no,
+      dataset_id: row.dataset_id!,
+      status: row.status,
+    }))
+  const membershipRows = memberships ?? []
+  const { complete: completeFacilityCount, incomplete: incompleteFacilityCount } =
+    countFacilitiesByMonthlyStatus(membershipRows, monthlyInspectionRows)
 
   const facilityNos = Array.from(
     new Set((recentInspections ?? []).map((inspection) => inspection.facility_no))
@@ -109,7 +125,12 @@ export async function DashboardContent() {
   )
 
   const datasetBreakdownRows = showDatasetColumn
-    ? groupInspectionsByDataset(currentMonthByDataset ?? [], datasetNameById)
+    ? groupInspectionsByDataset(
+        currentMonthByDataset ?? [],
+        datasetNameById,
+        membershipRows,
+        monthlyInspectionRows,
+      )
     : []
 
   const monthlyData = monthsInYear.map((monthValue, index) => {
@@ -125,7 +146,11 @@ export async function DashboardContent() {
   const statusData = [
     { name: "완료", value: completedCount ?? 0, color: "var(--chart-1)" },
     { name: "작성중", value: draftCount ?? 0, color: "var(--chart-2)" },
-    { name: "수정요청", value: needsRevisionCount ?? 0, color: "var(--chart-3)" },
+    {
+      name: "미완료",
+      value: incompleteFacilityCount,
+      color: "var(--chart-3)",
+    },
   ]
 
   return (
@@ -134,7 +159,8 @@ export async function DashboardContent() {
         facilityCount={facilityCount ?? 0}
         draftCount={draftCount ?? 0}
         completedCount={completedCount ?? 0}
-        needsRevisionCount={needsRevisionCount ?? 0}
+        completeFacilityCount={completeFacilityCount}
+        incompleteFacilityCount={incompleteFacilityCount}
       />
 
       <div className="grid gap-4 lg:grid-cols-2">

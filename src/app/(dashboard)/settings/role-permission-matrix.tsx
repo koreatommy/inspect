@@ -71,7 +71,14 @@ function PermissionCell({
   )
 }
 
-export function RolePermissionMatrix() {
+type RolePermissionMatrixProps = {
+  /** false이면 하단 정책·범례를 숨깁니다(매뉴얼 등 별도 절에서 안내할 때). */
+  showFooter?: boolean
+}
+
+export function RolePermissionMatrix({
+  showFooter = true,
+}: RolePermissionMatrixProps = {}) {
   const totalCount = PERMISSION_MATRIX_ROWS.length
 
   return (
@@ -176,25 +183,41 @@ export function RolePermissionMatrix() {
         </TableBody>
       </Table>
 
-      <ul className="space-y-1 text-xs text-muted-foreground">
-        <li>
-          <span className="font-medium text-foreground">안전관리자</span>:
-          위탁점검자 서명 불가
-        </li>
-        <li>
-          <span className="font-medium text-foreground">위탁점검자</span>:
-          설정(서명 정책) 화면 불가
-        </li>
-        <li>
-          <span className="font-medium text-foreground">일반 조회자</span>:
-          점검 작성·서명·삭제 불가
-        </li>
-        <li>신규 계정에는 시스템 관리자를 제외한 역할만 부여할 수 있습니다.</li>
-      </ul>
-      <p className="text-xs text-muted-foreground">
-        <Check className="mr-1 inline size-3.5 text-success" aria-hidden />
-        가능 · 회색 — 불가 · 회색 배경 행은 역할마다 다른 기능입니다.
-      </p>
+      {showFooter ? (
+        <>
+          <RolePermissionPolicyNotes />
+          <RolePermissionMatrixLegend />
+        </>
+      ) : null}
     </div>
+  )
+}
+
+export function RolePermissionPolicyNotes() {
+  return (
+    <ul className="space-y-1 text-xs text-muted-foreground">
+      <li>
+        <span className="font-medium text-foreground">안전관리자</span>:
+        위탁점검자 서명 불가
+      </li>
+      <li>
+        <span className="font-medium text-foreground">위탁점검자</span>:
+        설정(서명 정책) 화면 불가
+      </li>
+      <li>
+        <span className="font-medium text-foreground">일반 조회자</span>:
+        점검 작성·서명·삭제 불가
+      </li>
+      <li>신규 계정에는 시스템 관리자를 제외한 역할만 부여할 수 있습니다.</li>
+    </ul>
+  )
+}
+
+export function RolePermissionMatrixLegend() {
+  return (
+    <p className="text-xs text-muted-foreground">
+      <Check className="mr-1 inline size-3.5 text-success" aria-hidden />
+      가능 · 회색 — 불가 · 회색 배경 행은 역할마다 다른 기능입니다.
+    </p>
   )
 }

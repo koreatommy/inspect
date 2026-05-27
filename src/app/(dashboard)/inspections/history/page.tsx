@@ -3,6 +3,7 @@ import { Suspense } from "react"
 import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { MonthPickerField } from "@/components/ui/month-picker-field"
 import { cn } from "@/lib/utils"
 
 import { HistoryTable, HistoryTableSkeleton } from "./history-table"
@@ -60,11 +61,11 @@ export default async function InspectionHistoryPage({
         <CardContent className="space-y-4 pt-4">
           <form className="grid gap-2 sm:grid-cols-[1fr_180px_140px_auto]">
             <Input name="q" defaultValue={q} placeholder="시설번호 검색" />
-            <Input name="month" type="month" defaultValue={month} />
+            <MonthPickerField name="month" defaultValue={month} placeholder="전체 점검월" />
             <select
               name="status"
               defaultValue={statusFilter}
-              className="h-10 rounded-lg border border-input bg-background px-2.5 text-sm"
+              className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm"
             >
               <option value="">전체 상태</option>
               <option value="draft">작성중</option>

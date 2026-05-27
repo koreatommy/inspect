@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import { DatasetNameBadge } from "@/components/dashboard/dataset-inspection-breakdown"
 import { getStatusBadge } from "@/lib/inspection/status"
 import { cn } from "@/lib/utils"
@@ -52,6 +53,7 @@ export function RecentInspections({
             <TableHeader>
               <TableRow>
                 <TableHead>시설번호</TableHead>
+                <TableHead className="min-w-[6rem]">시설명</TableHead>
                 {showDatasetColumn ? <TableHead>데이터셋</TableHead> : null}
                 <TableHead>점검월</TableHead>
                 <TableHead className="hidden sm:table-cell">점검일</TableHead>
@@ -64,16 +66,11 @@ export function RecentInspections({
                 const badge = getStatusBadge(inspection.status)
                 return (
                   <TableRow key={inspection.id}>
-                    <TableCell className="text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono">{inspection.facility_no}</span>
-                        <span
-                          className="max-w-[12rem] truncate text-muted-foreground"
-                          title={inspection.facility_name ?? ""}
-                        >
-                          {inspection.facility_name ?? "-"}
-                        </span>
-                      </div>
+                    <TableCell className="font-mono text-xs whitespace-nowrap">
+                      {inspection.facility_no}
+                    </TableCell>
+                    <TableCell>
+                      <TruncatedText text={inspection.facility_name} />
                     </TableCell>
                     {showDatasetColumn ? (
                       <TableCell>

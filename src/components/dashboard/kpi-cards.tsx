@@ -38,17 +38,22 @@ type KpiCardsProps = {
   facilityCount: number
   draftCount: number
   completedCount: number
-  needsRevisionCount: number
+  completeFacilityCount: number
+  incompleteFacilityCount: number
 }
 
 export function KpiCards({
   facilityCount,
   draftCount,
   completedCount,
-  needsRevisionCount,
+  completeFacilityCount,
+  incompleteFacilityCount,
 }: KpiCardsProps) {
-  const total = draftCount + completedCount + needsRevisionCount
-  const rate = total > 0 ? Math.round((completedCount / total) * 100) : 0
+  const facilityTotal = completeFacilityCount + incompleteFacilityCount
+  const rate =
+    facilityTotal > 0
+      ? Math.round((completeFacilityCount / facilityTotal) * 100)
+      : 0
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -76,7 +81,7 @@ export function KpiCards({
       <KpiCard
         title="완료율"
         value={`${rate}%`}
-        description={`${completedCount} / ${total}건`}
+        description={`${completeFacilityCount} / ${facilityTotal} 시설`}
         icon={TrendingUp}
         accentClass="bg-chart-5"
       />

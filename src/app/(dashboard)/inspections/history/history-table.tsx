@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import { DatasetNameBadge } from "@/components/dashboard/dataset-inspection-breakdown"
 import {
   getAccessibleDatasets,
@@ -77,6 +78,21 @@ export async function HistoryTable({
   const { data: inspections, count } = await query
   const totalCount = count ?? 0
 
+  const facilityNos = Array.from(
+    new Set((inspections ?? []).map((row) => row.facility_no)),
+  )
+  const { data: facilities } =
+    facilityNos.length > 0
+      ? await supabase
+          .from("facilities")
+          .select("facility_no, facility_name")
+          .in("facility_no", facilityNos)
+      : { data: [] }
+
+  const facilityNameByNo = new Map(
+    (facilities ?? []).map((f) => [f.facility_no, f.facility_name]),
+  )
+
   const datasetNameById = showDatasetColumn
     ? await fetchDatasetNameMap(
         supabase,
@@ -117,6 +133,7 @@ export async function HistoryTable({
         <TableHeader>
           <TableRow>
             <TableHead>시설번호</TableHead>
+            <TableHead className="min-w-[6rem]">시설명</TableHead>
             {showDatasetColumn ? <TableHead>데이터셋</TableHead> : null}
             <TableHead>점검월</TableHead>
             <TableHead className="hidden sm:table-cell">점검일</TableHead>
@@ -139,7 +156,14 @@ export async function HistoryTable({
 
             return (
               <TableRow key={inspection.id}>
-                <TableCell className="font-mono text-xs">{inspection.facility_no}</TableCell>
+                <TableCell className="font-mono text-xs whitespace-nowrap">
+                  {inspection.facility_no}
+                </TableCell>
+                <TableCell>
+                  <TruncatedText
+                    text={facilityNameByNo.get(inspection.facility_no)}
+                  />
+                </TableCell>
                 {showDatasetColumn ? (
                   <TableCell>
                     {inspection.dataset_id ? (

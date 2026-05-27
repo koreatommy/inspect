@@ -1,8 +1,15 @@
+import {
+  RolePermissionMatrix,
+  RolePermissionMatrixLegend,
+  RolePermissionPolicyNotes,
+} from "@/app/(dashboard)/settings/role-permission-matrix"
+import { Check } from "lucide-react"
 import { ManualCallout } from "@/components/manual/manual-callout"
 import { ManualFAQ } from "@/components/manual/manual-faq"
 import { ManualSection } from "@/components/manual/manual-section"
 import { ManualStepGuide } from "@/components/manual/manual-step-guide"
 import { ManualUpdateHistory } from "@/components/manual/manual-update-history"
+import { ROLE_LABELS } from "@/lib/auth/permissions"
 import {
   inspectionStepGuide,
   manualFaqItems,
@@ -256,34 +263,91 @@ export function ManualSectionsContent({
       </ManualSection>
 
       <ManualSection
-        id="user-permissions"
-        title="13. 사용자 및 권한 관리"
-        hidden={isHidden(hiddenSectionIds, "user-permissions")}
+        id="user-permissions-overview"
+        title="13. 사용자 및 권한 · 개요"
+        description="역할별 접근 범위를 이해합니다"
+        hidden={isHidden(hiddenSectionIds, "user-permissions-overview")}
       >
-        <p>시스템 관리자는 설정 &gt; 사용자 관리에서 계정을 관리합니다.</p>
-        <ul className="list-inside list-disc space-y-1 text-muted-foreground">
+        <p>
+          본 서비스는 계정마다 <strong>역할(Role)</strong>을 부여하여 메뉴와
+          기능 접근을 제한합니다. 아래 네 가지 역할이 있으며, 다음 절에서
+          기능별 상세 비교표를 확인할 수 있습니다.
+        </p>
+        <ul className="list-inside list-disc space-y-2 text-muted-foreground">
           <li>
-            <strong>관리자(ADMIN):</strong> 데이터 업로드, 사용자·데이터셋
-            관리
+            <strong>{ROLE_LABELS.ADMIN}:</strong> 전체 시스템 관리 — 시설
+            JSON 업로드, 사용자·데이터셋 관리, 모든 점검·설정 기능
           </li>
           <li>
-            <strong>안전관리자(MANAGER):</strong> 설정·점검 관련 광범위 접근
+            <strong>{ROLE_LABELS.MANAGER}:</strong> 시설·점검 전 과정 — 현장
+            점검 작성·완료·안전관리자 서명, 설정(서명 정책) 접근 (위탁
+            서명 제외)
           </li>
           <li>
-            <strong>점검자(INSPECTOR):</strong> 점검 작성·조회
+            <strong>{ROLE_LABELS.INSPECTOR}:</strong> 현장 점검·위탁 서명 —
+            점검 작성·완료·위탁점검자 서명 (설정 화면 제외)
           </li>
           <li>
-            <strong>열람자(VIEWER):</strong> 조회 위주
+            <strong>{ROLE_LABELS.VIEWER}:</strong> 조회·대장·자기 정보 — 시설·
+            점검 이력·대장 조회, 본인 계정 정보 수정
           </li>
         </ul>
         <ManualCallout variant="info">
-          역할 명칭과 권한 범위는 조직 정책에 따라 조정될 수 있습니다.
+          일반적으로 기관 운영 담당에는 <strong>안전관리자</strong> 역할을
+          추천합니다. 역할 명칭과 세부 범위는 조직 정책에 따라 달라질 수
+          있습니다.
+        </ManualCallout>
+      </ManualSection>
+
+      <ManualSection
+        id="user-permissions-matrix"
+        title="14. 역할별 기능 비교"
+        description="시설·점검·계정·설정 기능을 역할별로 비교합니다"
+        hidden={isHidden(hiddenSectionIds, "user-permissions-matrix")}
+      >
+        <p>
+          아래 표에서 역할별로 사용 가능한 기능을 한눈에 비교할 수 있습니다.{" "}
+          <Check className="inline size-3.5 text-success" aria-hidden />
+          는 가능, 회색 — 는 불가를 의미합니다.
+        </p>
+        <RolePermissionMatrix showFooter={false} />
+      </ManualSection>
+
+      <ManualSection
+        id="user-permissions-policy"
+        title="15. 권한 제한 및 정책"
+        hidden={isHidden(hiddenSectionIds, "user-permissions-policy")}
+      >
+        <p>역할별로 특히 자주 헷갈리는 제한 사항과 계정 부여 정책입니다.</p>
+        <RolePermissionPolicyNotes />
+        <RolePermissionMatrixLegend />
+      </ManualSection>
+
+      <ManualSection
+        id="user-management"
+        title="16. 사용자 계정 관리"
+        description="시스템 관리자 전용"
+        hidden={isHidden(hiddenSectionIds, "user-management")}
+      >
+        <p>
+          <strong>시스템 관리자</strong>는 사이드바 「설정」&gt;「사용자
+          관리」에서 계정을 생성·변경합니다.
+        </p>
+        <ul className="list-inside list-disc space-y-1 text-muted-foreground">
+          <li>신규 계정 생성(이메일·초기 비밀번호·역할)</li>
+          <li>역할 변경 — 신규 계정에는 시스템 관리자를 제외한 역할만 부여</li>
+          <li>일시 정지·해제 및 정지 사유 기록</li>
+          <li>데이터셋(시설정보 사용자화) 할당 — 사용자별 조회·점검 범위</li>
+        </ul>
+        <ManualCallout variant="info">
+          역할별 기능 비교는 매뉴얼 「역할별 기능 비교」 절을 참고하세요.
+          사용자 관리 화면에서는 계정 운영에 집중할 수 있습니다.
         </ManualCallout>
       </ManualSection>
 
       <ManualSection
         id="data-export"
-        title="14. 데이터보내기"
+        title="17. 데이터보내기"
         hidden={isHidden(hiddenSectionIds, "data-export")}
       >
         <p>
@@ -298,7 +362,7 @@ export function ManualSectionsContent({
 
       <ManualSection
         id="faq"
-        title="15. 자주 묻는 질문"
+        title="18. 자주 묻는 질문"
         hidden={isHidden(hiddenSectionIds, "faq")}
       >
         <ManualFAQ items={manualFaqItems} />
@@ -306,7 +370,7 @@ export function ManualSectionsContent({
 
       <ManualSection
         id="troubleshooting"
-        title="16. 문제 해결"
+        title="19. 문제 해결"
         hidden={isHidden(hiddenSectionIds, "troubleshooting")}
       >
         <div className="space-y-4">
@@ -351,7 +415,7 @@ export function ManualSectionsContent({
 
       <ManualSection
         id="changelog"
-        title="17. 업데이트 이력"
+        title="20. 업데이트 이력"
         hidden={isHidden(hiddenSectionIds, "changelog")}
       >
         <ManualUpdateHistory entries={manualUpdateHistory} />

@@ -1,4 +1,9 @@
 import type { DatasetInspectionStats } from "@/components/dashboard/dataset-inspection-breakdown"
+import {
+  countIncompleteFacilitiesForDataset,
+  type FacilityDatasetMembershipRow,
+  type MonthlyInspectionStatusRow,
+} from "@/lib/facilities/monthly-status"
 
 type InspectionStatusRow = {
   dataset_id: string | null
@@ -9,10 +14,12 @@ type InspectionStatusRow = {
 export function groupInspectionsByDataset(
   rows: InspectionStatusRow[],
   datasetNameById: Map<string, string>,
+  memberships: ReadonlyArray<FacilityDatasetMembershipRow>,
+  monthlyInspections: ReadonlyArray<MonthlyInspectionStatusRow>,
 ): DatasetInspectionStats[] {
   const byDataset = new Map<
     string,
-    { draft: number; completed: number; needsRevision: number }
+    { draft: number; completed: number }
   >()
 
   for (const row of rows) {
@@ -20,12 +27,11 @@ export function groupInspectionsByDataset(
     const bucket = byDataset.get(row.dataset_id) ?? {
       draft: 0,
       completed: 0,
-      needsRevision: 0,
     }
     if (row.status === "draft") bucket.draft += 1
     else if (row.status === "completed" || row.status === "locked") {
       bucket.completed += 1
-    } else if (row.status === "needs_revision") bucket.needsRevision += 1
+    }
     byDataset.set(row.dataset_id, bucket)
   }
 
@@ -35,7 +41,11 @@ export function groupInspectionsByDataset(
       datasetName: datasetNameById.get(datasetId) ?? "알 수 없음",
       draftCount: counts.draft,
       completedCount: counts.completed,
-      needsRevisionCount: counts.needsRevision,
+      incompleteFacilityCount: countIncompleteFacilitiesForDataset(
+        datasetId,
+        memberships,
+        monthlyInspections,
+      ),
     }))
     .sort((a, b) => a.datasetName.localeCompare(b.datasetName, "ko"))
 }

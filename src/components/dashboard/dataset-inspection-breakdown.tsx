@@ -14,11 +14,12 @@ export type DatasetInspectionStats = {
   datasetName: string
   draftCount: number
   completedCount: number
-  needsRevisionCount: number
+  /** 해당 데이터셋에서 이번 달 점검이 완료되지 않은 시설 수 */
+  incompleteFacilityCount: number
 }
 
-function totalFor(row: DatasetInspectionStats) {
-  return row.draftCount + row.completedCount + row.needsRevisionCount
+function inspectionCountFor(row: DatasetInspectionStats) {
+  return row.draftCount + row.completedCount
 }
 
 export function DatasetInspectionBreakdown({
@@ -30,7 +31,10 @@ export function DatasetInspectionBreakdown({
 }) {
   if (rows.length <= 1) return null
 
-  const grandTotal = rows.reduce((sum, row) => sum + totalFor(row), 0)
+  const grandInspectionTotal = rows.reduce(
+    (sum, row) => sum + inspectionCountFor(row),
+    0,
+  )
 
   return (
     <Card>
@@ -47,9 +51,9 @@ export function DatasetInspectionBreakdown({
               <TableHead className="text-right">작성중</TableHead>
               <TableHead className="text-right">완료</TableHead>
               <TableHead className="text-right hidden sm:table-cell">
-                수정요청
+                미완료
               </TableHead>
-              <TableHead className="text-right">합계</TableHead>
+              <TableHead className="text-right">점검 합계</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -65,10 +69,10 @@ export function DatasetInspectionBreakdown({
                   {row.completedCount}
                 </TableCell>
                 <TableCell className="text-right tabular-nums hidden sm:table-cell">
-                  {row.needsRevisionCount}
+                  {row.incompleteFacilityCount}
                 </TableCell>
                 <TableCell className="text-right tabular-nums font-medium">
-                  {totalFor(row)}
+                  {inspectionCountFor(row)}
                 </TableCell>
               </TableRow>
             ))}
@@ -81,17 +85,17 @@ export function DatasetInspectionBreakdown({
                 {rows.reduce((s, r) => s + r.completedCount, 0)}
               </TableCell>
               <TableCell className="text-right tabular-nums font-medium hidden sm:table-cell">
-                {rows.reduce((s, r) => s + r.needsRevisionCount, 0)}
+                {rows.reduce((s, r) => s + r.incompleteFacilityCount, 0)}
               </TableCell>
               <TableCell className="text-right tabular-nums font-semibold">
-                {grandTotal}
+                {grandInspectionTotal}
               </TableCell>
             </TableRow>
           </TableBody>
         </Table>
         <p className="mt-3 text-xs text-muted-foreground">
-          할당된 데이터셋 합집합 기준입니다. 동일 시설·동일 월이라도 데이터셋이
-          다르면 별도 점검으로 집계됩니다.
+          작성중·완료·점검 합계는 점검 건수, 미완료는 시설 수 기준입니다.
+          동일 시설·동일 월이라도 데이터셋이 다르면 별도 점검으로 집계됩니다.
         </p>
       </CardContent>
     </Card>

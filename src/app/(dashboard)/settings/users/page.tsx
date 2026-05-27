@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { requirePermission } from "@/lib/auth/helpers"
 import { loadAdminUserDirectory } from "@/lib/settings/load-admin-users"
@@ -9,7 +11,6 @@ import {
 import { createClient } from "@/lib/supabase/server"
 
 import { CreateUserForm } from "../create-user-form"
-import { RolePermissionMatrix } from "../role-permission-matrix"
 import { UserManagementTable } from "../user-management-table"
 import type { DatasetOption } from "../user-dataset-assignment-cell"
 
@@ -75,13 +76,20 @@ export default async function SettingsUsersPage() {
           사용자 관리
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          계정 생성·역할 변경·일시 정지·해제와 역할별 기능을 확인합니다.
+          계정 생성·역할 변경·일시 정지·해제를 수행합니다. 역할별 기능 비교는{" "}
+          <Link
+            href="/manual#user-permissions-matrix"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            사용자 매뉴얼
+          </Link>
+          을 참고하세요.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>사용자 및 권한</CardTitle>
+          <CardTitle>사용자 계정</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {missingServiceRole ? (
@@ -100,18 +108,6 @@ export default async function SettingsUsersPage() {
               사용자 목록을 불러오지 못했습니다: {directoryError}
             </p>
           ) : null}
-          <div className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">
-                역할별 기능 비교
-              </h3>
-              <p className="mt-1 text-xs text-muted-foreground">
-                아래 표에서 역할별로 사용 가능한 기능을 한눈에 비교할 수
-                있습니다.
-              </p>
-            </div>
-            <RolePermissionMatrix />
-          </div>
           {!missingServiceRole && !publishableKeyMistake ? (
             <CreateUserForm />
           ) : null}

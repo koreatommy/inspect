@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { DatePickerField } from "@/components/ui/date-picker-field"
 import { Input } from "@/components/ui/input"
 import {
   resolveEffectiveStatus,
@@ -114,11 +115,10 @@ export function UserAccountControls({ user }: { user: UserAccountRow }) {
         placeholder="정지 사유 (선택)"
         className="h-8 text-sm"
       />
-      <Input
+      <DatePickerField
         name="suspendedUntil"
-        type="date"
-        className="h-8 text-sm"
-        title="해제 예정일 (선택)"
+        placeholder="해제 예정일 (선택)"
+        toYear={new Date().getFullYear() + 5}
       />
       <div className="flex flex-wrap items-center gap-2">
         <Button type="submit" size="sm" variant="destructive" disabled={suspendPending}>
