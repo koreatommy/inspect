@@ -53,6 +53,24 @@ export function formatDateLabel(value: string) {
   return `${y}. ${m}. ${d}.`
 }
 
+/** 한국 시간 기준 0–23시 */
+export function getKoreaHour(date = new Date()) {
+  return Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Seoul",
+      hour: "numeric",
+      hour12: false,
+    }).format(date)
+  )
+}
+
+export function getKoreaGreeting(date = new Date()) {
+  const hour = getKoreaHour(date)
+  if (hour < 12) return "좋은 아침입니다"
+  if (hour < 18) return "좋은 오후입니다"
+  return "좋은 저녁입니다"
+}
+
 export function getKoreaDateParts(date = new Date()) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Seoul",

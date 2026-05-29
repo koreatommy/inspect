@@ -7,16 +7,10 @@ import {
   getCurrentUserProfile,
   resolveDisplayLabel,
 } from "@/lib/auth/helpers"
+import { getKoreaGreeting } from "@/lib/date"
 import { getDailySafetyQuiz } from "@/lib/quiz/get-daily-quiz"
 
 import { DashboardContent, DashboardContentSkeleton } from "../dashboard-content"
-
-function getGreeting() {
-  const hour = new Date().getHours()
-  if (hour < 12) return "좋은 아침입니다"
-  if (hour < 18) return "좋은 오후입니다"
-  return "좋은 저녁입니다"
-}
 
 export default async function DashboardPage() {
   const profile = await getCurrentUserProfile()
@@ -36,7 +30,7 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold tracking-tight md:text-2xl">
-          {getGreeting()}
+          {getKoreaGreeting()}
           {displayLabel !== "사용자" ? `, ${displayLabel}님` : ""}
         </h2>
         <div className="mt-3 grid gap-3 lg:grid-cols-2">
