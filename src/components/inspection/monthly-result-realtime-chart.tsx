@@ -6,12 +6,12 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts"
 
+import { ChartBox } from "@/components/charts/chart-box"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 
@@ -212,8 +212,7 @@ export function MonthlyResultRealtimeChart({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="h-[260px]">
-          <ResponsiveContainer width="100%" height="100%">
+        <ChartBox className="h-[260px]">
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis
@@ -242,8 +241,7 @@ export function MonthlyResultRealtimeChart({
                 ))}
               </Bar>
             </BarChart>
-          </ResponsiveContainer>
-        </div>
+        </ChartBox>
         <div className="grid gap-2 sm:grid-cols-2">
           {chartData.map((item) => (
             <div

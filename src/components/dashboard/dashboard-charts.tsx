@@ -8,12 +8,12 @@ import {
   LineChart,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts"
 
+import { ChartBox } from "@/components/charts/chart-box"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 type MonthlyData = {
@@ -34,8 +34,7 @@ export function MonthlyInspectionTrendChart({ data }: { data: MonthlyData[] }) {
         <CardTitle className="text-base">월별 점검 현황</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[260px]">
-          <ResponsiveContainer width="100%" height="100%">
+        <ChartBox className="h-[260px]">
             <LineChart data={data} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis
@@ -77,8 +76,7 @@ export function MonthlyInspectionTrendChart({ data }: { data: MonthlyData[] }) {
                 />
               </Line>
             </LineChart>
-          </ResponsiveContainer>
-        </div>
+        </ChartBox>
       </CardContent>
     </Card>
   )
@@ -99,8 +97,7 @@ export function StatusDonutChart({ data }: { data: StatusData[] }) {
       </CardHeader>
       <CardContent>
         <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
-          <div className="h-[200px] w-[200px] shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
+          <ChartBox className="h-[200px] w-[200px] shrink-0">
               <PieChart>
                 <Pie
                   data={data}
@@ -126,8 +123,7 @@ export function StatusDonutChart({ data }: { data: StatusData[] }) {
                   }}
                 />
               </PieChart>
-            </ResponsiveContainer>
-          </div>
+          </ChartBox>
 
           <div className="w-full space-y-3 sm:w-auto">
             {data.map((entry) => (
