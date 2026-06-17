@@ -16,7 +16,7 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode
 }) {
-  await requireUser()
+  const user = await requireUser()
   const profile = await getCurrentUserProfile()
 
   return (
@@ -26,6 +26,7 @@ export default async function DashboardLayout({
         <Header
           displayLabel={resolveDisplayLabel(profile)}
           role={profile.role}
+          userId={user.id}
         />
         <main className="flex-1 p-4 lg:p-6 print:p-0">{children}</main>
       </div>

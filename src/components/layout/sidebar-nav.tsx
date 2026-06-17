@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  Bell,
   BookOpen,
   Building2,
   ClipboardCheck,
@@ -66,18 +67,22 @@ export function SidebarNav({ role, onLinkClick }: SidebarNavProps) {
     hasPermission(role, "settings:account")
   const canUploadJson = hasPermission(role, "facility:upload")
   const canManageUsers = hasPermission(role, "user:manage")
+  const settingsNotificationsActive = pathname.startsWith(
+    "/settings/notifications",
+  )
+  const settingsAccountActive = pathname.startsWith("/settings/account")
+  const settingsUsersActive = pathname.startsWith("/settings/users")
   const settingsActive =
     pathname === "/settings" ||
     (pathname.startsWith("/settings/") &&
-      !pathname.startsWith("/settings/account"))
+      !pathname.startsWith("/settings/account") &&
+      !pathname.startsWith("/settings/notifications"))
   const dataManagementActive = pathname.startsWith("/admin/")
   const uploadActive = pathname.startsWith("/admin/upload")
   const datasetsActive = pathname.startsWith("/admin/datasets")
   const inactiveFacilitiesActive = pathname.startsWith(
     "/admin/facilities/inactive",
   )
-  const settingsAccountActive = pathname.startsWith("/settings/account")
-  const settingsUsersActive = pathname.startsWith("/settings/users")
   const manualActive = pathname.startsWith("/manual")
 
   return (
@@ -177,6 +182,16 @@ export function SidebarNav({ role, onLinkClick }: SidebarNavProps) {
             >
               <Users className="size-[18px] shrink-0" />
               사용자 관리
+            </Link>
+          ) : null}
+          {canSettingsNav ? (
+            <Link
+              href="/settings/notifications"
+              onClick={onLinkClick}
+              className={cn(navLinkClass(settingsNotificationsActive), "pl-10")}
+            >
+              <Bell className="size-[18px] shrink-0" />
+              알림
             </Link>
           ) : null}
           <Link

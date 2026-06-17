@@ -125,6 +125,18 @@ export type FacilityDatasetUploadRow = {
   created_at: string
 }
 
+export type NotificationRow = {
+  id: string
+  user_id: string
+  type: string
+  title: string
+  body: string | null
+  link: string | null
+  metadata: Json
+  read_at: string | null
+  created_at: string
+}
+
 export type DatasetAuditLogRow = {
   id: string
   dataset_id: string | null
@@ -251,6 +263,7 @@ export type Database = {
       facility_dataset_memberships: TableDefinition<FacilityDatasetMembershipRow>
       user_dataset_assignments: TableDefinition<UserDatasetAssignmentRow>
       facility_dataset_uploads: TableDefinition<FacilityDatasetUploadRow>
+      notifications: TableDefinition<NotificationRow>
       dataset_audit_log: TableDefinition<DatasetAuditLogRow>
       inspection_user_roles: TableDefinition<{
         user_id: string

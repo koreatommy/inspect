@@ -1,6 +1,7 @@
 "use client"
 
 import { signOut } from "@/app/(dashboard)/actions"
+import { NotificationBell } from "@/components/layout/notification-bell"
 import { MobileSidebarTrigger } from "@/components/layout/sidebar"
 import { ThemeToggle } from "@/components/theme/theme-toggle"
 import { Badge } from "@/components/ui/badge"
@@ -11,9 +12,10 @@ import type { AppRole } from "@/types/inspection"
 type HeaderProps = {
   displayLabel: string
   role: AppRole
+  userId: string
 }
 
-export function Header({ displayLabel, role }: HeaderProps) {
+export function Header({ displayLabel, role, userId }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm print:hidden lg:px-6">
       <div className="flex items-center gap-3">
@@ -30,6 +32,7 @@ export function Header({ displayLabel, role }: HeaderProps) {
         <span className="hidden text-sm text-muted-foreground md:inline">
           {displayLabel || "로그인 필요"}
         </span>
+        <NotificationBell userId={userId} />
         <ThemeToggle />
         <form action={signOut}>
           <Button variant="outline" size="sm" type="submit">
