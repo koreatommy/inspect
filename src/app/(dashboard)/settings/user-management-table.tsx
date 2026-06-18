@@ -31,6 +31,7 @@ import {
   UserDatasetAssignmentCell,
   type DatasetOption,
 } from "./user-dataset-assignment-cell"
+import { UserPasswordResetCell } from "./user-password-reset-cell"
 
 const ASSIGNABLE_ROLES: AppRole[] = ["MANAGER", "INSPECTOR", "VIEWER"]
 
@@ -161,6 +162,9 @@ function RoleChangeRow({ user, datasets, assignedDatasetIds }: RowProps) {
         />
       </TableCell>
       <TableCell>
+        <UserPasswordResetCell userId={user.user_id} />
+      </TableCell>
+      <TableCell>
         <UserAccountControls
           user={{
             user_id: user.user_id,
@@ -206,6 +210,7 @@ export function UserManagementTable({
           <TableHead>이메일 변경</TableHead>
           <TableHead>역할 변경</TableHead>
           <TableHead>데이터셋 할당</TableHead>
+          <TableHead>비밀번호 재설정</TableHead>
           <TableHead>계정 관리</TableHead>
         </TableRow>
       </TableHeader>

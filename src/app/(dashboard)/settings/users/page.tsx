@@ -76,7 +76,7 @@ export default async function SettingsUsersPage() {
           사용자 관리
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          계정 생성·역할 변경·일시 정지·해제를 수행합니다. 역할별 기능 비교는{" "}
+          계정 생성·역할 변경·비밀번호 재설정·일시 정지·해제를 수행합니다. 역할별 기능 비교는{" "}
           <Link
             href="/manual#user-permissions-matrix"
             className="font-medium text-primary underline-offset-4 hover:underline"

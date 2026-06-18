@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { syncUserDatasetAssignments } from "@/lib/dataset/assignments"
 import { logDatasetAudit } from "@/lib/dataset/audit-log"
 import { getCurrentRole, getCurrentUser, hasRole } from "@/lib/auth/helpers"
+import { revokeUserSessions } from "@/lib/auth/revoke-user-sessions"
 import { getPersonNameValidationError } from "@/lib/inspection/person-name"
 import { getServiceRoleClient } from "@/lib/supabase/admin"
 import {
@@ -33,12 +34,55 @@ function mapCreateUserError(message: string): string {
   return "사용자 생성에 실패했습니다. 잠시 후 다시 시도해 주세요."
 }
 
+function mapResetPasswordError(message: string): string {
+  const m = message.toLowerCase()
+  if (m.includes("password") && m.includes("weak")) {
+    return "비밀번호가 정책에 맞지 않습니다. 더 길거나 복잡하게 설정해 주세요."
+  }
+  return "비밀번호 재설정에 실패했습니다. 잠시 후 다시 시도해 주세요."
+}
+
+function validateAdminPasswordPair(
+  password: string,
+  passwordConfirm: string
+): string | null {
+  if (password.length < MIN_PASSWORD_LEN) {
+    return `비밀번호는 ${MIN_PASSWORD_LEN}자 이상이어야 합니다.`
+  }
+  if (password !== passwordConfirm) {
+    return "비밀번호와 확인이 일치하지 않습니다."
+  }
+  return null
+}
+
+async function requireAdminServiceClient() {
+  const adminClient = getServiceRoleClient()
+  if (!resolveElevatedSupabaseKey()) {
+    return {
+      error:
+        "서버에 SUPABASE_SERVICE_ROLE_KEY(또는 SUPABASE_SECRET_KEY)가 설정되지 않았습니다.",
+    } as const
+  }
+  if (!adminClient) {
+    return {
+      error:
+        "Supabase URL과 elevated 키 조합이 올바르지 않습니다. 환경 변수를 확인해 주세요.",
+    } as const
+  }
+  return { adminClient } as const
+}
+
 export type UpdateRoleState = {
   success?: boolean
   error?: string
 }
 
 export type UpdateEmailState = {
+  success?: boolean
+  error?: string
+}
+
+export type ResetPasswordState = {
   success?: boolean
   error?: string
 }
@@ -109,12 +153,9 @@ export async function createUserAction(
     return { error: "로그인 아이디는 이메일 주소 형식이어야 합니다." }
   }
 
-  if (password.length < MIN_PASSWORD_LEN) {
-    return { error: `비밀번호는 ${MIN_PASSWORD_LEN}자 이상이어야 합니다.` }
-  }
-
-  if (password !== passwordConfirm) {
-    return { error: "비밀번호와 확인이 일치하지 않습니다." }
+  const passwordError = validateAdminPasswordPair(password, passwordConfirm)
+  if (passwordError) {
+    return { error: passwordError }
   }
 
   if (!ASSIGNABLE_ROLES.includes(role)) {
@@ -230,6 +271,64 @@ export async function updateUserEmailByAdminAction(
   if (!user.user) {
     return { error: "대상 사용자를 찾을 수 없습니다." }
   }
+
+  revalidatePath("/settings")
+  revalidatePath("/settings/users")
+  return { success: true }
+}
+
+export async function resetUserPasswordByAdminAction(
+  _previousState: ResetPasswordState,
+  formData: FormData
+): Promise<ResetPasswordState> {
+  const currentRole = await getCurrentRole()
+  if (!hasRole(currentRole, ["ADMIN"])) {
+    return { error: "관리자만 사용할 수 있습니다." }
+  }
+
+  const clientResult = await requireAdminServiceClient()
+  if ("error" in clientResult) {
+    return { error: clientResult.error }
+  }
+  const { adminClient } = clientResult
+
+  const userId = String(formData.get("userId") ?? "").trim()
+  const password = String(formData.get("password") ?? "")
+  const passwordConfirm = String(formData.get("passwordConfirm") ?? "")
+
+  if (!userId) {
+    return { error: "사용자를 선택해 주세요." }
+  }
+
+  const passwordError = validateAdminPasswordPair(password, passwordConfirm)
+  if (passwordError) {
+    return { error: passwordError }
+  }
+
+  const supabase = await createClient()
+  const { data: targetRow } = await supabase
+    .from("inspection_user_roles")
+    .select("user_id")
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  if (!targetRow) {
+    return { error: "사용자 정보를 찾을 수 없습니다." }
+  }
+
+  const { data: user, error } = await adminClient.auth.admin.updateUserById(
+    userId,
+    { password }
+  )
+
+  if (error) {
+    return { error: mapResetPasswordError(error.message) }
+  }
+  if (!user.user) {
+    return { error: "대상 사용자를 찾을 수 없습니다." }
+  }
+
+  await revokeUserSessions(userId)
 
   revalidatePath("/settings")
   revalidatePath("/settings/users")

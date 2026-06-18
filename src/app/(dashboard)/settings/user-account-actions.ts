@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { buildReactivatePatch, buildSuspendPatch } from "@/lib/auth/account-status"
 import { getCurrentRole, getCurrentUser, hasRole } from "@/lib/auth/helpers"
-import { resolveElevatedSupabaseKey } from "@/lib/supabase/service-key"
+import { revokeUserSessions } from "@/lib/auth/revoke-user-sessions"
 import { createClient } from "@/lib/supabase/server"
 import type { AppRole } from "@/types/inspection"
 
@@ -23,26 +23,6 @@ function parseSuspendedUntil(raw: string): string | null {
     return null
   }
   return date.toISOString()
-}
-
-async function revokeUserSessions(userId: string) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
-  const key = resolveElevatedSupabaseKey()
-  if (!url || !key) {
-    return
-  }
-
-  try {
-    await fetch(`${url}/auth/v1/admin/users/${userId}/logout`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        apikey: key,
-      },
-    })
-  } catch {
-    // 정지 상태·RLS가 다음 요청에서 차단하므로 세션 revoke 실패는 치명적이지 않음
-  }
 }
 
 export async function suspendUserAction(
