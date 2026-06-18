@@ -1,6 +1,7 @@
 import { cache } from "react"
 import { redirect } from "next/navigation"
 
+import { getSafeUser } from "@/lib/supabase/auth-session"
 import { createClient } from "@/lib/supabase/server"
 import type { AppRole } from "@/types/inspection"
 import { resolveAccountAccess } from "./account-access"
@@ -8,11 +9,7 @@ import { hasPermission, type Permission } from "./permissions"
 
 export const getCurrentUser = cache(async () => {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  return user
+  return getSafeUser(supabase)
 })
 
 export async function requireUser() {

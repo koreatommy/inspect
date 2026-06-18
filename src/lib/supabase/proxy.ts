@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server"
 
 import { resolveAccountAccess } from "@/lib/auth/account-access"
 import type { Database } from "@/types/database"
+import { getSafeUser } from "./auth-session"
 import { getSupabaseEnv } from "./env"
 
 const publicRoutes = ["/", "/login", "/auth/callback"]
@@ -40,9 +41,7 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSafeUser(supabase)
 
   const { pathname } = request.nextUrl
 

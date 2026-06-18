@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { getPersonNameValidationError } from "@/lib/inspection/person-name"
+import { getSafeUser } from "@/lib/supabase/auth-session"
 import { createClient } from "@/lib/supabase/server"
 import {
   getKoreanMobilePhoneValidationError,
@@ -39,9 +40,7 @@ export async function changePasswordAction(
   }
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSafeUser(supabase)
 
   if (!user) {
     return { error: "로그인이 필요합니다." }
@@ -82,9 +81,7 @@ export async function updateMyProfileAction(
   }
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSafeUser(supabase)
 
   if (!user) {
     return { error: "로그인이 필요합니다." }

@@ -7,6 +7,7 @@ import {
   getCurrentRole,
   hasRole,
 } from "@/lib/auth/helpers"
+import { getSafeUser } from "@/lib/supabase/auth-session"
 import { getKoreaDateParts } from "@/lib/date"
 import { createClient } from "@/lib/supabase/server"
 
@@ -39,9 +40,7 @@ export async function createMonthlyInspection(formData: FormData) {
   }
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSafeUser(supabase)
 
   if (!user) {
     redirect("/login")
