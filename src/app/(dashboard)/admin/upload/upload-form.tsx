@@ -1,6 +1,8 @@
 "use client"
 
-import { useActionState, useId, useState } from "react"
+import { useId, useRef, useState } from "react"
+import { Loader2 } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,32 +16,116 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { formatDatasetOptionLabel } from "@/lib/dataset/names"
-import {
-  uploadJsonAction,
-  type DatasetOption,
-  type UploadState,
-} from "./actions"
+import type { UploadProgress, UploadResult } from "@/lib/json-parser/uploader"
+import type { DatasetOption } from "./actions"
 
 type Mode = "existing" | "new"
 
-const initialState: UploadState = {}
+type SSEDoneData = { phase: "done"; result: UploadResult; datasetName: string }
+type SSEErrorData = { phase: "error"; error: string }
+type SSEData = UploadProgress | SSEDoneData | SSEErrorData
+
+function isSSEDone(data: SSEData): data is SSEDoneData {
+  return data.phase === "done" && "result" in data && "datasetName" in data
+}
+
+function isSSEError(data: SSEData): data is SSEErrorData {
+  return data.phase === "error" && "error" in data
+}
 
 type UploadFormProps = {
   datasets: DatasetOption[]
 }
 
 export function UploadForm({ datasets }: UploadFormProps) {
-  const [state, formAction, isPending] = useActionState(
-    uploadJsonAction,
-    initialState,
-  )
+  const router = useRouter()
+  const formRef = useRef<HTMLFormElement>(null)
   const hasExisting = datasets.length > 0
   const [mode, setMode] = useState<Mode>(hasExisting ? "existing" : "new")
   const [selectedDatasetId, setSelectedDatasetId] = useState<string>(
     hasExisting ? datasets[0]!.id : "",
   )
 
+  const [isUploading, setIsUploading] = useState(false)
+  const [progress, setProgress] = useState<UploadProgress | null>(null)
+  const [result, setResult] = useState<UploadResult | null>(null)
+  const [resultDatasetName, setResultDatasetName] = useState<string>("-")
+  const [error, setError] = useState<string | null>(null)
+
   const datasetModeFieldId = useId()
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+
+    setIsUploading(true)
+    setProgress({ phase: "validating", current: 0, total: 0, message: "시작..." })
+    setResult(null)
+    setError(null)
+
+    try {
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error ?? "업로드 실패")
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error("스트림을 읽을 수 없습니다.")
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n\n")
+        buffer = lines.pop() ?? ""
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6)) as SSEData
+
+              if (isSSEDone(data)) {
+                setResult(data.result)
+                setResultDatasetName(data.datasetName)
+                setProgress(null)
+                router.refresh()
+              } else if (isSSEError(data)) {
+                throw new Error(data.error)
+              } else {
+                setProgress(data)
+              }
+            } catch (parseError) {
+              if (parseError instanceof Error) {
+                throw parseError
+              }
+              console.error("SSE 파싱 오류:", parseError)
+            }
+          }
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "업로드 중 오류가 발생했습니다.")
+      setProgress(null)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const progressPercent =
+    progress && progress.total > 0
+      ? Math.round((progress.current / progress.total) * 100)
+      : 0
 
   return (
     <div className="space-y-6">
@@ -48,8 +134,8 @@ export function UploadForm({ datasets }: UploadFormProps) {
           <CardTitle>업로드 대상 설정</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="space-y-5">
-            <fieldset className="space-y-3">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
+            <fieldset className="space-y-3" disabled={isUploading}>
               <legend className="text-sm font-medium">데이터셋 선택</legend>
               <div className="flex flex-col gap-2 md:flex-row md:items-center">
                 <label className="flex items-center gap-2 text-sm">
@@ -60,7 +146,7 @@ export function UploadForm({ datasets }: UploadFormProps) {
                     value="existing"
                     checked={mode === "existing"}
                     onChange={() => setMode("existing")}
-                    disabled={!hasExisting}
+                    disabled={!hasExisting || isUploading}
                   />
                   기존 데이터셋에 업로드
                 </label>
@@ -72,6 +158,7 @@ export function UploadForm({ datasets }: UploadFormProps) {
                     value="new"
                     checked={mode === "new"}
                     onChange={() => setMode("new")}
+                    disabled={isUploading}
                   />
                   새 데이터셋으로 업로드
                 </label>
@@ -84,7 +171,8 @@ export function UploadForm({ datasets }: UploadFormProps) {
                     required
                     value={selectedDatasetId}
                     onChange={(e) => setSelectedDatasetId(e.target.value)}
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                    className="w-full rounded-md border bg-background px-3 py-2 text-sm disabled:opacity-50"
+                    disabled={isUploading}
                   >
                     {datasets.map((ds) => (
                       <option key={ds.id} value={ds.id}>
@@ -105,57 +193,80 @@ export function UploadForm({ datasets }: UploadFormProps) {
                     placeholder="데이터셋 이름 (예: 서천군 학교 2026)"
                     required
                     maxLength={80}
+                    disabled={isUploading}
                   />
                   <Input
                     name="newDatasetDescription"
                     placeholder="설명 (선택)"
                     maxLength={200}
+                    disabled={isUploading}
                   />
                 </div>
               )}
             </fieldset>
 
-            <fieldset className="space-y-2">
+            <fieldset className="space-y-2" disabled={isUploading}>
               <legend className="text-sm font-medium">JSON 파일</legend>
               <Input
                 name="file"
                 type="file"
                 accept="application/json,.json"
                 required
+                disabled={isUploading}
               />
             </fieldset>
 
-            {state.error ? (
+            {error && (
               <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {state.error}
+                {error}
               </p>
-            ) : null}
+            )}
 
-            {state.warning ? (
-              <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
-                {state.warning}
-              </p>
-            ) : null}
+            {progress && (
+              <div className="space-y-2 rounded-lg border p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {progress.message}
+                  </span>
+                  {progress.total > 0 && (
+                    <span className="tabular-nums">{progressPercent}%</span>
+                  )}
+                </div>
+                {progress.total > 0 && (
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "업로드 중..." : "업로드 실행"}
+            <Button type="submit" disabled={isUploading}>
+              {isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  업로드 중...
+                </>
+              ) : (
+                "업로드 실행"
+              )}
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      {state.result ? (
-        <UploadResultCard
-          result={state.result}
-          datasetName={state.datasetName ?? "-"}
-        />
-      ) : null}
+      {result && (
+        <UploadResultCard result={result} datasetName={resultDatasetName} />
+      )}
     </div>
   )
 }
 
 type UploadResultCardProps = {
-  result: NonNullable<UploadState["result"]>
+  result: UploadResult
   datasetName: string
 }
 
