@@ -44,7 +44,7 @@
 
 ```
 src/
-├── app/(auth)/ai/
+├── app/ai/
 │   ├── page.tsx          # 페이지 셸
 │   ├── error.tsx         # 에러 UI
 │   └── README.md         # 이 문서
