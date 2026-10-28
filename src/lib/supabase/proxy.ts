@@ -6,7 +6,7 @@ import type { Database } from "@/types/database"
 import { getSafeUser } from "./auth-session"
 import { getSupabaseEnv } from "./env"
 
-const publicRoutes = ["/", "/login", "/auth/callback", "/ai", "/api/ai"]
+const publicRoutes = ["/", "/login", "/auth/callback", "/ai", "/api/ai", "/osan"]
 
 function isPublicRoute(pathname: string) {
   return publicRoutes.some(

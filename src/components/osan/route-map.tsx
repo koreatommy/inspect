@@ -1,0 +1,222 @@
+"use client"
+
+import { useEffect, useMemo, useRef } from "react"
+import { LocateFixed } from "lucide-react"
+
+import type { OsanFacilityWithRelations } from "@/lib/osan/types"
+import { optimizeRoute, type LatLng } from "@/lib/osan/route"
+import { useKakaoLoader } from "./use-kakao-loader"
+
+type Props = {
+  facilities: OsanFacilityWithRelations[]
+  start?: LatLng
+  selectedId: string | null
+  onSelect: (id: string) => void
+  onLocate: () => void
+  locating: boolean
+}
+
+const OSAN_CENTER = { lat: 37.1498, lng: 127.0772 }
+
+const MARKER_W = 40
+const MARKER_H = 52
+
+/**
+ * CustomOverlay는 카카오 타일/라벨 IMG 아래에 깔려 숫자가 가려진다.
+ * MarkerImage(캔버스)는 마커 레이어에 그려져 라벨 위에서도 숫자가 보인다.
+ */
+function createMarkerImage(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  kakaoMaps: any,
+  index: number,
+  selected: boolean,
+  visited: boolean,
+) {
+  const bg = visited ? "#059669" : selected ? "#111827" : "#2563eb"
+  const canvas = document.createElement("canvas")
+  canvas.width = MARKER_W
+  canvas.height = MARKER_H
+  const ctx = canvas.getContext("2d")
+  if (!ctx) {
+    return new kakaoMaps.MarkerImage(
+      "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==",
+      new kakaoMaps.Size(1, 1),
+    )
+  }
+
+  const cx = MARKER_W / 2
+  const cy = 18
+  const r = 15
+
+  ctx.beginPath()
+  ctx.moveTo(cx, MARKER_H - 2)
+  ctx.lineTo(cx - 9, cy + r - 2)
+  ctx.lineTo(cx + 9, cy + r - 2)
+  ctx.closePath()
+  ctx.fillStyle = bg
+  ctx.fill()
+
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.fillStyle = bg
+  ctx.fill()
+  ctx.lineWidth = 3
+  ctx.strokeStyle = "#fff"
+  ctx.stroke()
+
+  ctx.fillStyle = "#fff"
+  ctx.font = "800 16px ui-sans-serif, system-ui, sans-serif"
+  ctx.textAlign = "center"
+  ctx.textBaseline = "middle"
+  ctx.fillText(String(index), cx, cy + 0.5)
+
+  return new kakaoMaps.MarkerImage(
+    canvas.toDataURL("image/png"),
+    new kakaoMaps.Size(MARKER_W, MARKER_H),
+    { offset: new kakaoMaps.Point(MARKER_W / 2, MARKER_H - 2) },
+  )
+}
+
+export function RouteMap({
+  facilities,
+  start,
+  selectedId,
+  onSelect,
+  onLocate,
+  locating,
+}: Props) {
+  const { loaded, error } = useKakaoLoader()
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const overlaysRef = useRef<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const lineRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+  const routed = useMemo(() => {
+    const points = facilities
+      .filter((f) => f.lat != null && f.lng != null)
+      .map((f) => ({ id: f.id, lat: f.lat!, lng: f.lng! }))
+    return optimizeRoute(points, start)
+  }, [facilities, start])
+
+  const orderIndex = useMemo(() => {
+    const map = new Map<string, number>()
+    routed.order.forEach((p, i) => map.set(p.id, i + 1))
+    return map
+  }, [routed])
+
+  useEffect(() => {
+    if (!loaded || !containerRef.current || !window.kakao?.maps) return
+    if (!mapRef.current) {
+      mapRef.current = new window.kakao.maps.Map(containerRef.current, {
+        center: new window.kakao.maps.LatLng(OSAN_CENTER.lat, OSAN_CENTER.lng),
+        level: 6,
+      })
+    }
+
+    const map = mapRef.current
+    overlaysRef.current.forEach((o) => o.setMap(null))
+    overlaysRef.current = []
+    lineRef.current?.setMap(null)
+
+    // 시트 높이 변화 후 컨테이너 크기를 다시 반영한다.
+    map.relayout()
+
+    const path: unknown[] = []
+    const bounds = new window.kakao.maps.LatLngBounds()
+    if (start) {
+      const origin = new window.kakao.maps.LatLng(start.lat, start.lng)
+      bounds.extend(origin)
+      path.push(origin)
+    }
+
+    for (const point of routed.order) {
+      path.push(new window.kakao.maps.LatLng(point.lat, point.lng))
+    }
+
+    // 경로선은 마커보다 아래(zIndex 낮음)에 그린다.
+    if (path.length >= 2) {
+      lineRef.current = new window.kakao.maps.Polyline({
+        path,
+        strokeWeight: 4,
+        strokeColor: "#2563eb",
+        strokeOpacity: 0.55,
+        strokeStyle: "solid",
+        zIndex: 1,
+      })
+      lineRef.current.setMap(map)
+    }
+
+    for (const facility of facilities) {
+      if (facility.lat == null || facility.lng == null) continue
+      const position = new window.kakao.maps.LatLng(facility.lat, facility.lng)
+      bounds.extend(position)
+      const index = orderIndex.get(facility.id) ?? 0
+      const selected = facility.id === selectedId
+      const marker = new window.kakao.maps.Marker({
+        position,
+        image: createMarkerImage(
+          window.kakao.maps,
+          index,
+          selected,
+          facility.visited,
+        ),
+        zIndex: selected ? 30 : 10 + index,
+        clickable: true,
+        title: `${index}. ${facility.name}`,
+      })
+      marker.setMap(map)
+      window.kakao.maps.event.addListener(marker, "click", () =>
+        onSelect(facility.id),
+      )
+      overlaysRef.current.push(marker)
+    }
+
+    if (!bounds.isEmpty()) {
+      map.setBounds(bounds, 72, 48, 48, 48)
+    }
+  }, [facilities, loaded, onSelect, orderIndex, routed.order, selectedId, start])
+
+  // 선택 변경 시에만 이동. facilities 갱신마다 panTo 하면 setBounds로 맞춘 2개 마커 뷰가 깨진다.
+  const selectedIdRef = useRef(selectedId)
+  useEffect(() => {
+    const prev = selectedIdRef.current
+    selectedIdRef.current = selectedId
+    if (!loaded || !mapRef.current || !selectedId || selectedId === prev) return
+    const selected = facilities.find((f) => f.id === selectedId)
+    if (selected?.lat == null || selected.lng == null) return
+    mapRef.current.panTo(new window.kakao.maps.LatLng(selected.lat, selected.lng))
+  }, [facilities, loaded, selectedId])
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center bg-muted px-6 text-center text-sm text-muted-foreground">
+        {error}
+        <br />
+        `.env.local`에 NEXT_PUBLIC_KAKAO_MAP_KEY 를 넣고 개발 서버를 재시작해 주세요.
+      </div>
+    )
+  }
+
+  if (!loaded) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        지도를 불러오는 중…
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative h-full">
+      <div ref={containerRef} className="size-full" />
+      <button
+        type="button"
+        onClick={onLocate}
+        disabled={locating}
+        className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-full bg-background shadow-md"
+        aria-label="내 위치로 최적화"
+      >
+        <LocateFixed className={locating ? "size-5 animate-pulse" : "size-5"} />
+      </button>
+    </div>
+  )
+}
