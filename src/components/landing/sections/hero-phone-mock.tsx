@@ -1,5 +1,6 @@
 "use client"
 
+import { AnimatePresence, motion } from "framer-motion"
 import Image from "next/image"
 import { useEffect, useState } from "react"
 
@@ -155,45 +156,73 @@ export function HeroPhoneMock() {
                 체크리스트
               </div>
               {CHECKLIST_ITEMS.map((item, i) => (
-                <div
+                <motion.div
                   key={item.label}
                   className="mb-1.5 flex items-center gap-2.5 rounded-[10px] border border-line-alternative bg-white px-3 py-2.5"
+                  animate={
+                    displayChecks[i]
+                      ? { borderColor: "rgba(0,102,255,.22)" }
+                      : { borderColor: "var(--semantic-line-normal-alternative)" }
+                  }
+                  transition={{ duration: 0.25 }}
                 >
-                  <div
-                    className="flex size-5 items-center justify-center rounded-md transition-colors duration-200"
-                    style={{
-                      background: displayChecks[i]
+                  <motion.div
+                    className="flex size-5 items-center justify-center rounded-md"
+                    animate={{
+                      backgroundColor: displayChecks[i]
                         ? "var(--semantic-primary-normal)"
                         : "#fff",
-                      border: displayChecks[i]
-                        ? "1.5px solid var(--semantic-primary-normal)"
-                        : "1.5px solid var(--semantic-line-normal-normal)",
+                      borderColor: displayChecks[i]
+                        ? "var(--semantic-primary-normal)"
+                        : "var(--semantic-line-normal-normal)",
+                      scale: displayChecks[i] ? 1 : 0.96,
                     }}
+                    style={{ borderWidth: 1.5, borderStyle: "solid" }}
+                    transition={{ type: "spring", stiffness: 420, damping: 22 }}
                   >
-                    {displayChecks[i] ? (
-                      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
-                        <path
-                          d="M2.5 6.5l2.5 2.5L9.5 3.5"
-                          fill="none"
-                          stroke="#fff"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    ) : null}
-                  </div>
+                    <AnimatePresence>
+                      {displayChecks[i] ? (
+                        <motion.svg
+                          key="check"
+                          width="12"
+                          height="12"
+                          viewBox="0 0 12 12"
+                          aria-hidden
+                          initial={{ opacity: 0, scale: 0.4 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.4 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 24 }}
+                        >
+                          <path
+                            d="M2.5 6.5l2.5 2.5L9.5 3.5"
+                            fill="none"
+                            stroke="#fff"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </motion.svg>
+                      ) : null}
+                    </AnimatePresence>
+                  </motion.div>
                   <div className="flex-1 text-[13.5px] font-medium text-label-normal">
                     {item.label}
                   </div>
-                  {displayChecks[i] ? (
-                    <div
-                      className={`rounded-full px-[7px] py-[3px] text-[10.5px] font-bold ${STATUS_BADGE[item.status].className}`}
-                    >
-                      {STATUS_BADGE[item.status].label}
-                    </div>
-                  ) : null}
-                </div>
+                  <AnimatePresence>
+                    {displayChecks[i] ? (
+                      <motion.div
+                        key="badge"
+                        className={`rounded-full px-[7px] py-[3px] text-[10.5px] font-bold ${STATUS_BADGE[item.status].className}`}
+                        initial={{ opacity: 0, x: 6, scale: 0.9 }}
+                        animate={{ opacity: 1, x: 0, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ type: "spring", stiffness: 380, damping: 22 }}
+                      >
+                        {STATUS_BADGE[item.status].label}
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+                </motion.div>
               ))}
             </div>
 

@@ -1,11 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { ArrowRight, Play, ShieldCheck, FileText, Bell } from "lucide-react"
+import {
+  motion,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+} from "framer-motion"
+import { ArrowRight, Play } from "lucide-react"
 
 import { Reveal } from "../motion/reveal"
-import { HeroPhoneMock } from "./hero-phone-mock"
+import { HeroFloatingVisual } from "./hero-floating-visual"
 import { HeroHighlighter } from "./hero-highlight"
 import { HeroRotatingSubtitle } from "./hero-rotating-subtitle"
 
@@ -15,21 +19,30 @@ interface HeroProps {
 }
 
 export function Hero({ onPrimaryClick, onSecondaryClick }: HeroProps) {
-  const [scrollY, setScrollY] = useState(0)
+  const reduceMotion = useReducedMotion()
+  const { scrollY } = useScroll()
 
-  useEffect(() => {
-    function onScroll() {
-      setScrollY(window.scrollY)
-    }
-    onScroll()
-    window.addEventListener("scroll", onScroll, { passive: true })
-    return () => window.removeEventListener("scroll", onScroll)
-  }, [])
-
-  const py1 = scrollY * 0.18
-  const py2 = scrollY * 0.1
-  const py3 = scrollY * 0.28
-  const fade = Math.max(0, 1 - scrollY / 600)
+  const blob1Y = useTransform(() =>
+    reduceMotion ? 0 : scrollY.get() * 0.18,
+  )
+  const blob1X = useTransform(() =>
+    reduceMotion ? 0 : scrollY.get() * 0.054,
+  )
+  const blob2Y = useTransform(() =>
+    reduceMotion ? 0 : scrollY.get() * -0.1,
+  )
+  const blob2X = useTransform(() =>
+    reduceMotion ? 0 : scrollY.get() * -0.03,
+  )
+  const blob3Y = useTransform(() =>
+    reduceMotion ? 0 : scrollY.get() * 0.168,
+  )
+  const blob3X = useTransform(() =>
+    reduceMotion ? 0 : scrollY.get() * 0.02,
+  )
+  const copyOpacity = useTransform(() =>
+    reduceMotion ? 1 : Math.max(0, 1 - scrollY.get() / 600),
+  )
 
   return (
     <section
@@ -37,36 +50,37 @@ export function Hero({ onPrimaryClick, onSecondaryClick }: HeroProps) {
       data-bg="#FBFCFE"
       className="relative min-h-dvh overflow-hidden pb-20 pt-[120px]"
     >
-      {/* Animated background blobs */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div
-          className="absolute -left-40 -top-[120px] size-[540px] rounded-full"
+        <motion.div
+          className="absolute -left-40 -top-[120px] size-[540px] rounded-full will-change-transform"
           style={{
             background:
               "radial-gradient(circle, rgba(0,102,255,.16) 0%, rgba(0,102,255,0) 65%)",
-            transform: `translate3d(${py1 * 0.3}px, ${py1}px, 0)`,
+            x: blob1X,
+            y: blob1Y,
           }}
         />
-        <div
-          className="absolute -right-[120px] top-20 size-[620px] rounded-full"
+        <motion.div
+          className="absolute -right-[120px] top-20 size-[620px] rounded-full will-change-transform"
           style={{
             background:
               "radial-gradient(circle, rgba(0,191,64,.10) 0%, rgba(0,191,64,0) 65%)",
-            transform: `translate3d(${-py2 * 0.3}px, ${-py2}px, 0)`,
+            x: blob2X,
+            y: blob2Y,
           }}
         />
-        <div
-          className="absolute -bottom-[180px] left-[30%] size-[700px] rounded-full"
+        <motion.div
+          className="absolute -bottom-[180px] left-[30%] size-[700px] rounded-full will-change-transform"
           style={{
             background:
               "radial-gradient(circle, rgba(255,146,0,.07) 0%, rgba(255,146,0,0) 65%)",
-            transform: `translate3d(${py2 * 0.2}px, ${py3 * 0.6}px, 0)`,
+            x: blob3X,
+            y: blob3Y,
           }}
         />
-        {/* Grid pattern */}
         <svg
           width="100%"
           height="100%"
@@ -87,8 +101,7 @@ export function Hero({ onPrimaryClick, onSecondaryClick }: HeroProps) {
       </div>
 
       <div className="landing-hero-grid relative mx-auto grid max-w-[1240px] items-center gap-14 px-8 max-[980px]:grid-cols-1 min-[981px]:grid-cols-[1.05fr_0.95fr]">
-        {/* Left: copy */}
-        <div style={{ opacity: fade }} className="transition-opacity">
+        <motion.div style={{ opacity: copyOpacity }} className="min-w-0">
           <Reveal y={16} eager>
             <div className="inline-flex items-center gap-2 rounded-full border border-line-normal bg-white px-3 py-1.5 text-[13px] font-medium text-label-neutral shadow-sm">
               <span className="flex size-[18px] items-center justify-center rounded-full bg-brand text-[10px] font-bold text-white">
@@ -151,185 +164,33 @@ export function Hero({ onPrimaryClick, onSecondaryClick }: HeroProps) {
               ))}
             </div>
           </Reveal>
-        </div>
+        </motion.div>
 
-        {/* Right: floating cards */}
-        <div className="landing-hero-visual relative hidden min-h-[600px] items-center justify-center min-[981px]:flex">
-          <FloatingCard
-            className="left-[-20px] top-[40px]"
-            style={{
-              transform: `translate3d(${-py2 * 0.3}px, ${py2 * 0.2}px, 0)`,
-            }}
-            delay={400}
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-9 items-center justify-center rounded-[10px] bg-[rgba(0,191,64,.12)] text-[#009632]">
-                <ShieldCheck className="size-5" />
-              </div>
-              <div>
-                <div className="text-[11px] font-medium text-label-alternative">
-                  안전점검 상태
-                </div>
-                <div className="text-sm font-bold text-label-normal">
-                  양호 · 5건 완료
-                </div>
-              </div>
-            </div>
-          </FloatingCard>
-
-          <FloatingCard
-            className="right-[-30px] top-[160px]"
-            style={{
-              transform: `translate3d(${py2 * 0.3}px, ${-py2 * 0.2}px, 0)`,
-            }}
-            delay={550}
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-9 items-center justify-center rounded-[10px] bg-[rgba(0,102,255,.10)] text-brand">
-                <FileText className="size-5" />
-              </div>
-              <div>
-                <div className="text-[11px] font-medium text-label-alternative">
-                  점검대장
-                </div>
-                <div className="text-sm font-bold text-label-normal">
-                  PDF 자동 생성
-                </div>
-              </div>
-            </div>
-          </FloatingCard>
-
-          <FloatingCard
-            className="bottom-[60px] right-[-10px]"
-            style={{
-              transform: `translate3d(${py3 * 0.2}px, ${py3 * 0.15}px, 0)`,
-            }}
-            delay={700}
-          >
-            <div className="flex items-center gap-3">
-              <Sparkline />
-              <div>
-                <div className="text-[11px] font-medium text-label-alternative">
-                  점검 완료율
-                </div>
-                <div className="text-lg font-bold tracking-[-0.02em] text-label-normal">
-                  98.4%{" "}
-                  <span className="ml-1 text-[11px] text-[#009632]">
-                    ▲ 12.3%p
-                  </span>
-                </div>
-              </div>
-            </div>
-          </FloatingCard>
-
-          <FloatingCard
-            className="bottom-[110px] left-[-10px]"
-            style={{
-              transform: `translate3d(${-py3 * 0.2}px, ${-py3 * 0.12}px, 0)`,
-            }}
-            delay={850}
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-9 items-center justify-center rounded-[10px] bg-[rgba(255,146,0,.12)] text-[#D17600]">
-                <Bell className="size-5" />
-              </div>
-              <div>
-                <div className="text-[11px] font-medium text-label-alternative">
-                  정기검사 만료
-                </div>
-                <div className="text-sm font-bold text-label-normal">
-                  D-37 · 자동 알림
-                </div>
-              </div>
-            </div>
-          </FloatingCard>
-
-          <div className="relative z-[2]">
-            <HeroPhoneMock />
-          </div>
-        </div>
+        <HeroFloatingVisual />
       </div>
 
-      {/* Scroll cue */}
-      <div
+      <motion.div
         aria-hidden="true"
         className="absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1.5 text-label-alternative"
-        style={{ opacity: fade }}
+        style={{ opacity: copyOpacity }}
       >
         <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">
           Scroll
         </span>
         <motion.div
           className="h-7 w-px bg-gradient-to-b from-transparent to-label-alternative"
-          animate={{ y: ["-4px", "4px", "-4px"], opacity: [0.25, 1, 0.25] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          animate={
+            reduceMotion
+              ? undefined
+              : { y: ["-4px", "4px", "-4px"], opacity: [0.25, 1, 0.25] }
+          }
+          transition={
+            reduceMotion
+              ? undefined
+              : { duration: 2, repeat: Infinity, ease: "easeInOut" }
+          }
         />
-      </div>
+      </motion.div>
     </section>
-  )
-}
-
-function FloatingCard({
-  children,
-  className,
-  style,
-  delay = 0,
-}: {
-  children: React.ReactNode
-  className?: string
-  style?: React.CSSProperties
-  delay?: number
-}) {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    const t = setTimeout(() => setMounted(true), delay)
-    return () => clearTimeout(t)
-  }, [delay])
-
-  return (
-    <motion.div
-      className={`landing-float absolute z-[3] rounded-[14px] border border-white/80 bg-white/92 p-3 shadow-[0_18px_40px_rgba(0,28,80,.12),0_4px_12px_rgba(0,28,80,.06)] backdrop-blur-xl ${className}`}
-      style={{
-        opacity: mounted ? 1 : 0,
-        transition: "opacity 600ms ease",
-        ...style,
-      }}
-    >
-      {children}
-    </motion.div>
-  )
-}
-
-function Sparkline() {
-  return (
-    <svg width="56" height="36" viewBox="0 0 56 36" className="text-brand">
-      <defs>
-        <linearGradient id="spark-g" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="currentColor" stopOpacity=".25" />
-          <stop offset="1" stopColor="currentColor" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M2 28 L 10 22 L 18 24 L 26 16 L 34 18 L 42 10 L 54 6 L 54 34 L 2 34 Z"
-        fill="url(#spark-g)"
-      />
-      <path
-        d="M2 28 L 10 22 L 18 24 L 26 16 L 34 18 L 42 10 L 54 6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle
-        cx="54"
-        cy="6"
-        r="3"
-        fill="#fff"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-    </svg>
   )
 }
