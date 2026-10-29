@@ -180,7 +180,7 @@ export function FacilityCardPanel({
         )}
       </section>
       <section>
-        <h4 className="mb-2 text-sm font-medium">점검내용</h4>
+        <h4 className="mb-2 text-sm font-medium">기타 점검 의견</h4>
         <MemoSection
           notes={facility.notes}
           draft={draftNote}
