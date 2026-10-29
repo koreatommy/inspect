@@ -2,6 +2,26 @@
 
 export type GeoResult = { lat: number; lng: number } | null
 
+/**
+ * 오산시 대략 경계(여유 포함).
+ * Photon 등 폴백이 동명·유사 주소를 타 지역(예: 보령)으로 매칭하는 것을 걸러낸다.
+ */
+export const OSAN_BOUNDS = {
+  minLat: 37.08,
+  maxLat: 37.25,
+  minLng: 126.98,
+  maxLng: 127.15,
+} as const
+
+export function isWithinOsanBounds(lat: number, lng: number): boolean {
+  return (
+    lat >= OSAN_BOUNDS.minLat &&
+    lat <= OSAN_BOUNDS.maxLat &&
+    lng >= OSAN_BOUNDS.minLng &&
+    lng <= OSAN_BOUNDS.maxLng
+  )
+}
+
 /** 우편번호 접두사 및 층/호 등 꼬리 제거로 지오코딩 성공률을 높인다. */
 export function normalizeAddress(address: string): string {
   return address
@@ -37,6 +57,7 @@ async function geocodeWithKakao(
   const lat = Number.parseFloat(doc.y)
   const lng = Number.parseFloat(doc.x)
   if (Number.isNaN(lat) || Number.isNaN(lng)) return null
+  if (!isWithinOsanBounds(lat, lng)) return null
   return { lat, lng }
 }
 
@@ -60,10 +81,11 @@ async function geocodeWithPhoton(query: string): Promise<GeoResult> {
   if (!coords) return null
   const [lng, lat] = coords
   if (Number.isNaN(lat) || Number.isNaN(lng)) return null
+  if (!isWithinOsanBounds(lat, lng)) return null
   return { lat, lng }
 }
 
-/** 주소 검색. 카카오 REST 키가 있으면 우선 사용하고, 실패 시 Nominatim. */
+/** 주소 검색. 카카오 REST 키가 있으면 우선 사용하고, 실패 시 Photon. */
 export async function geocodeAddress(
   address: string,
   restKey?: string,

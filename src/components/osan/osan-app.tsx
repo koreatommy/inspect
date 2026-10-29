@@ -141,7 +141,11 @@ export function OsanApp({ initialFacilities }: Props) {
   const doneCount = facilities.filter((f) => f.visited).length
 
   function patchFacility(next: OsanFacilityWithRelations) {
-    setFacilities((prev) => prev.map((f) => (f.id === next.id ? next : f)))
+    setFacilities((prev) =>
+      prev.map((f) =>
+        f.id === next.id ? { ...next, lat: f.lat, lng: f.lng } : f,
+      ),
+    )
   }
 
   function locate() {

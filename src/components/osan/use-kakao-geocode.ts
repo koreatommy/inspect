@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react"
 
 import { saveFacilityCoords } from "@/app/osan/actions"
 import type { OsanFacilityWithRelations } from "@/lib/osan/types"
-import { normalizeAddress } from "@/lib/osan/geocode"
+import { isWithinOsanBounds, normalizeAddress } from "@/lib/osan/geocode"
 
 type Args = {
   loaded: boolean
@@ -43,10 +43,13 @@ export function useKakaoGeocode({ loaded, facilities, onResolved }: Args) {
                   resolve(null)
                   return
                 }
-                resolve({
-                  lat: Number.parseFloat(result[0].y),
-                  lng: Number.parseFloat(result[0].x),
-                })
+                const lat = Number.parseFloat(result[0].y)
+                const lng = Number.parseFloat(result[0].x)
+                if (!isWithinOsanBounds(lat, lng)) {
+                  resolve(null)
+                  return
+                }
+                resolve({ lat, lng })
               },
             )
           },

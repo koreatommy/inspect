@@ -5,6 +5,7 @@ import { LocateFixed } from "lucide-react"
 
 import type { OsanFacilityWithRelations } from "@/lib/osan/types"
 import { optimizeRoute, type LatLng } from "@/lib/osan/route"
+import { spiderfyPositions } from "@/lib/osan/spiderfy"
 import { useKakaoLoader } from "./use-kakao-loader"
 
 type Props = {
@@ -112,6 +113,18 @@ export function RouteMap({
     return map
   }, [routed])
 
+  /** 동일 좌표 시설은 화면에서만 원형으로 벌려 번호가 겹치지 않게 한다. */
+  const displayById = useMemo(() => {
+    const withCoords = facilities
+      .filter((f) => f.lat != null && f.lng != null)
+      .map((f) => ({ id: f.id, lat: f.lat!, lng: f.lng! }))
+    // 동선 순으로 넣어 겹친 그룹 안에서도 번호 순으로 배치
+    withCoords.sort(
+      (a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0),
+    )
+    return spiderfyPositions(withCoords)
+  }, [facilities, orderIndex])
+
   const bottomPad = () =>
     sheetOpenRef.current
       ? Math.round(window.innerHeight * 0.48)
@@ -143,7 +156,8 @@ export function RouteMap({
     }
 
     for (const point of routed.order) {
-      path.push(new window.kakao.maps.LatLng(point.lat, point.lng))
+      const display = displayById.get(point.id) ?? point
+      path.push(new window.kakao.maps.LatLng(display.lat, display.lng))
     }
 
     // 경로선은 마커보다 아래(zIndex 낮음)에 그린다.
@@ -161,7 +175,10 @@ export function RouteMap({
 
     for (const facility of facilities) {
       if (facility.lat == null || facility.lng == null) continue
-      const position = new window.kakao.maps.LatLng(facility.lat, facility.lng)
+      const display =
+        displayById.get(facility.id) ??
+        ({ lat: facility.lat, lng: facility.lng } as LatLng)
+      const position = new window.kakao.maps.LatLng(display.lat, display.lng)
       bounds.extend(position)
       const index = orderIndex.get(facility.id) ?? 0
       const selected = facility.id === selectedId
@@ -188,7 +205,16 @@ export function RouteMap({
       // top, right, bottom, left — 하단 시트에 마커가 가리지 않게
       map.setBounds(bounds, 48, 48, bottomPad(), 48)
     }
-  }, [facilities, loaded, onSelect, orderIndex, routed.order, selectedId, start])
+  }, [
+    displayById,
+    facilities,
+    loaded,
+    onSelect,
+    orderIndex,
+    routed.order,
+    selectedId,
+    start,
+  ])
 
   useEffect(() => {
     if (!loaded || !containerRef.current || !mapRef.current) return
@@ -206,10 +232,10 @@ export function RouteMap({
     const prev = selectedIdRef.current
     selectedIdRef.current = selectedId
     if (!loaded || !mapRef.current || !selectedId || selectedId === prev) return
-    const selected = facilities.find((f) => f.id === selectedId)
-    if (selected?.lat == null || selected.lng == null) return
-    mapRef.current.panTo(new window.kakao.maps.LatLng(selected.lat, selected.lng))
-  }, [facilities, loaded, selectedId])
+    const display = displayById.get(selectedId)
+    if (!display) return
+    mapRef.current.panTo(new window.kakao.maps.LatLng(display.lat, display.lng))
+  }, [displayById, loaded, selectedId])
 
   if (error) {
     return (

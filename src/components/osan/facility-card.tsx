@@ -1,14 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Check, Copy, MapPinned, Navigation, Phone, Trash2 } from "lucide-react"
 import { toast } from "./toast"
 
 import { clearVisitRecord, toggleVisited } from "@/app/osan/actions"
-import type { OsanFacilityWithRelations, OsanNote, OsanPhotoWithUrl } from "@/lib/osan/types"
+import type {
+  OsanFacilityWithRelations,
+  OsanPhotoWithUrl,
+} from "@/lib/osan/types"
 import { cn } from "@/lib/utils"
+import type { DraftPhoto } from "./draft-photo"
 import { MemoSection } from "./memo-section"
-import { PhotoUploader } from "./photo-uploader"
+import { persistInspection } from "./persist-inspection"
+import { PhotoUploader, revokeDraftPhoto } from "./photo-uploader"
 import { kakaoRouteUrl, placeTypeColor } from "./osan-utils"
 
 type Props = {
@@ -28,29 +33,85 @@ function InfoRow({ label, value }: { label: string; value: string | null }) {
   )
 }
 
+function mergePhotosBySlot(
+  existing: OsanPhotoWithUrl[],
+  saved: OsanPhotoWithUrl[],
+) {
+  const bySlot = new Map(existing.map((photo) => [photo.slot, photo]))
+  for (const photo of saved) bySlot.set(photo.slot, photo)
+  return [...bySlot.values()].sort((a, b) => a.slot - b.slot)
+}
+
 export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) {
   const [open, setOpen] = useState(Boolean(defaultOpen))
   const [busy, setBusy] = useState(false)
+  const [draftPhotos, setDraftPhotos] = useState<DraftPhoto[]>([])
+  const [draftNote, setDraftNote] = useState("")
+  const draftPhotosRef = useRef(draftPhotos)
+  draftPhotosRef.current = draftPhotos
   const hasCoords = facility.lat != null && facility.lng != null
 
-  async function handleVisited() {
+  useEffect(() => {
+    return () => {
+      draftPhotosRef.current.forEach(revokeDraftPhoto)
+    }
+  }, [])
+
+  function clearDrafts() {
+    draftPhotosRef.current.forEach(revokeDraftPhoto)
+    setDraftPhotos([])
+    setDraftNote("")
+  }
+
+  async function handleVisitedClick() {
     if (busy) return
+
+    if (facility.visited) {
+      setBusy(true)
+      const res = await toggleVisited(facility.id, false)
+      setBusy(false)
+      if (!res.ok) {
+        toast.error(res.error)
+        return
+      }
+      onChange({ ...facility, visited: false })
+      toast.success("미완료로 변경")
+      return
+    }
+
+    if (draftPhotos.length === 0 && !draftNote.trim()) {
+      toast.error("사진 또는 점검내용을 입력해 주세요.")
+      return
+    }
+
     setBusy(true)
-    const next = !facility.visited
-    const res = await toggleVisited(facility.id, next)
+    const res = await persistInspection({
+      facilityId: facility.id,
+      photos: draftPhotos,
+      note: draftNote,
+    })
     setBusy(false)
     if (!res.ok) {
       toast.error(res.error)
       return
     }
-    onChange({ ...facility, visited: next })
-    toast.success(next ? "방문 완료" : "미방문으로 변경")
+
+    const savedPhotos = mergePhotosBySlot(facility.photos, res.photos)
+    const savedNotes = res.note ? [res.note, ...facility.notes] : facility.notes
+    clearDrafts()
+    onChange({
+      ...facility,
+      visited: true,
+      photos: savedPhotos,
+      notes: savedNotes,
+    })
+    toast.success("점검 완료")
   }
 
   async function handleClearVisit() {
     if (busy) return
     const ok = window.confirm(
-      "이 시설의 방문완료·사진·메모를 모두 삭제할까요?\n시설 정보는 남고 미방문 상태로 돌아갑니다.",
+      "이 시설의 점검완료·사진·점검내용을 모두 삭제할까요?\n시설 정보는 남고 미완료 상태로 돌아갑니다.",
     )
     if (!ok) return
     setBusy(true)
@@ -60,6 +121,7 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
       toast.error(res.error)
       return
     }
+    clearDrafts()
     onChange({ ...facility, visited: false, photos: [], notes: [] })
     toast.success("완료 기록을 삭제했습니다")
   }
@@ -74,13 +136,10 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
     }
   }
 
-  function patchPhotos(photos: OsanPhotoWithUrl[]) {
-    onChange({ ...facility, photos })
-  }
-
-  function patchNotes(notes: OsanNote[]) {
-    onChange({ ...facility, notes })
-  }
+  const savedAsDraft: DraftPhoto[] = facility.photos.map((photo) => ({
+    slot: photo.slot,
+    previewUrl: photo.url,
+  }))
 
   return (
     <article
@@ -159,7 +218,7 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
         )}
         <button
           type="button"
-          onClick={() => void handleVisited()}
+          onClick={() => void handleVisitedClick()}
           disabled={busy}
           className={cn(
             "flex h-10 flex-1 items-center justify-center gap-1 rounded-lg text-sm font-medium",
@@ -169,7 +228,7 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
           )}
         >
           <Check className="size-4" />
-          {facility.visited ? "완료됨" : "방문완료"}
+          {facility.visited ? "완료됨" : "점검완료"}
         </button>
       </div>
 
@@ -200,17 +259,19 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
           <section>
             <h4 className="mb-2 text-sm font-medium">현장 사진 (최대 5장)</h4>
             <PhotoUploader
-              facilityId={facility.id}
-              photos={facility.photos}
-              onChange={patchPhotos}
+              photos={facility.visited ? savedAsDraft : draftPhotos}
+              onChange={facility.visited || busy ? undefined : setDraftPhotos}
+              readOnly={facility.visited || busy}
             />
           </section>
           <section>
-            <h4 className="mb-2 text-sm font-medium">메모</h4>
+            <h4 className="mb-2 text-sm font-medium">점검내용</h4>
             <MemoSection
-              facilityId={facility.id}
               notes={facility.notes}
-              onChange={patchNotes}
+              draft={draftNote}
+              onDraftChange={setDraftNote}
+              readOnly={facility.visited}
+              disabled={busy}
             />
           </section>
           {facility.visited ? (

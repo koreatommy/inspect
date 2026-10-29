@@ -1,6 +1,7 @@
 "use server"
 
 import { getOsanClient, OSAN_BUCKET, osanPublicUrl } from "@/lib/osan/db"
+import { isWithinOsanBounds } from "@/lib/osan/geocode"
 import type { OsanNote, OsanPhotoWithUrl } from "@/lib/osan/types"
 
 type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string }
@@ -169,6 +170,9 @@ export async function saveFacilityCoords(
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       return { ok: false, error: "좌표가 올바르지 않습니다." }
     }
+    if (!isWithinOsanBounds(lat, lng)) {
+      return { ok: false, error: "오산시 관외 좌표는 저장하지 않습니다." }
+    }
     const client = requireClient()
     const { error } = await client
       .from("facilities")
@@ -198,7 +202,7 @@ export async function toggleVisited(
   }
 }
 
-/** 방문완료·사진·메모를 모두 지우고 미방문 상태로 되돌린다. 시설 마스터는 유지. */
+/** 점검완료·사진·점검내용을 모두 지우고 미완료 상태로 되돌린다. 시설 마스터는 유지. */
 export async function clearVisitRecord(
   facilityId: string,
 ): Promise<ActionResult<{ id: string }>> {
