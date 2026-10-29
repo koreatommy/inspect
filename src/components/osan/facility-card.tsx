@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { Check, Copy, MapPinned, Phone, Trash2 } from "lucide-react"
+import { Check, Copy, Hourglass, MapPinned, Phone, Trash2 } from "lucide-react"
 import { toast } from "./toast"
 
 import { clearVisitRecord, toggleVisited } from "@/app/osan/actions"
+import { getFacilityEquipment } from "@/lib/osan/facility-equipment"
 import type {
   OsanFacilityWithRelations,
   OsanPhotoWithUrl,
@@ -17,9 +18,27 @@ import { PhotoUploader, revokeDraftPhoto } from "./photo-uploader"
 import { RouteNavLinks } from "./route-nav-links"
 import {
   addressWithoutPostal,
+  cpfFacilityUrl,
   kakaoRouteUrl,
   placeTypeColor,
 } from "./osan-utils"
+
+type BusyKind = "complete" | "undo" | "clear"
+
+const BUSY_COPY: Record<BusyKind, { button: string; status: string }> = {
+  complete: {
+    button: "저장 중…",
+    status: "사진·점검내용을 저장하고 있습니다",
+  },
+  undo: {
+    button: "변경 중…",
+    status: "미완료로 되돌리는 중입니다",
+  },
+  clear: {
+    button: "삭제 중…",
+    status: "완료 기록을 삭제하고 있습니다",
+  },
+}
 
 type Props = {
   facility: OsanFacilityWithRelations
@@ -32,16 +51,30 @@ function InfoRow({
   label,
   value,
   action,
+  href,
 }: {
   label: string
   value: string | null
   action?: ReactNode
+  /** 있으면 값에 새 창 링크를 건다 */
+  href?: string
 }) {
   if (!value) return null
   return (
     <div className="flex gap-2 text-sm">
       <span className="w-16 shrink-0 text-muted-foreground">{label}</span>
-      <span className="min-w-0 flex-1 break-words">{value}</span>
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="min-w-0 flex-1 break-words text-primary underline-offset-2 hover:underline"
+        >
+          {value}
+        </a>
+      ) : (
+        <span className="min-w-0 flex-1 break-words">{value}</span>
+      )}
       {action}
     </div>
   )
@@ -58,11 +91,13 @@ function mergePhotosBySlot(
 
 export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) {
   const [open, setOpen] = useState(Boolean(defaultOpen))
-  const [busy, setBusy] = useState(false)
+  const [busyKind, setBusyKind] = useState<BusyKind | null>(null)
   const [draftPhotos, setDraftPhotos] = useState<DraftPhoto[]>([])
   const [draftNote, setDraftNote] = useState("")
   const draftPhotosRef = useRef(draftPhotos)
   draftPhotosRef.current = draftPhotos
+  const busy = busyKind != null
+  const busyCopy = busyKind ? BUSY_COPY[busyKind] : null
   const hasCoords = facility.lat != null && facility.lng != null
 
   useEffect(() => {
@@ -81,9 +116,9 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
     if (busy) return
 
     if (facility.visited) {
-      setBusy(true)
+      setBusyKind("undo")
       const res = await toggleVisited(facility.id, false)
-      setBusy(false)
+      setBusyKind(null)
       if (!res.ok) {
         toast.error(res.error)
         return
@@ -97,14 +132,21 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
       toast.error("사진 또는 점검내용을 입력해 주세요.")
       return
     }
+    const requiresEquipment = Boolean(
+      getFacilityEquipment(facility.facility_code)?.types.length,
+    )
+    if (requiresEquipment && draftPhotos.some((photo) => !photo.equipmentType)) {
+      toast.error("각 사진의 기구유형을 선택해 주세요.")
+      return
+    }
 
-    setBusy(true)
+    setBusyKind("complete")
     const res = await persistInspection({
       facilityId: facility.id,
       photos: draftPhotos,
       note: draftNote,
     })
-    setBusy(false)
+    setBusyKind(null)
     if (!res.ok) {
       toast.error(res.error)
       return
@@ -128,9 +170,9 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
       "이 시설의 점검완료·사진·점검내용을 모두 삭제할까요?\n시설 정보는 남고 미완료 상태로 돌아갑니다.",
     )
     if (!ok) return
-    setBusy(true)
+    setBusyKind("clear")
     const res = await clearVisitRecord(facility.id)
-    setBusy(false)
+    setBusyKind(null)
     if (!res.ok) {
       toast.error(res.error)
       return
@@ -155,6 +197,8 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
   const savedAsDraft: DraftPhoto[] = facility.photos.map((photo) => ({
     slot: photo.slot,
     previewUrl: photo.url,
+    equipmentType: photo.equipment_type ?? undefined,
+    caption: photo.caption ?? undefined,
   }))
 
   return (
@@ -233,22 +277,53 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
           type="button"
           onClick={() => void handleVisitedClick()}
           disabled={busy}
+          aria-busy={busy}
           className={cn(
-            "flex h-10 flex-1 items-center justify-center gap-1 rounded-lg text-sm font-medium",
-            facility.visited
-              ? "bg-emerald-600 text-white"
-              : "bg-foreground text-background",
+            "flex h-10 flex-1 items-center justify-center gap-1 rounded-lg text-sm font-medium disabled:opacity-80",
+            busyKind === "complete" || busyKind === "undo"
+              ? "bg-amber-600 text-white"
+              : facility.visited
+                ? "bg-emerald-600 text-white"
+                : "bg-foreground text-background",
           )}
         >
-          <Check className="size-4" />
-          {facility.visited ? "완료됨" : "점검완료"}
+          {busyKind === "complete" || busyKind === "undo" ? (
+            <>
+              <Hourglass className="size-4 animate-hourglass" aria-hidden />
+              {busyCopy?.button}
+            </>
+          ) : (
+            <>
+              <Check className="size-4" />
+              {facility.visited ? "완료됨" : "점검완료"}
+            </>
+          )}
         </button>
       </div>
+
+      {busyCopy ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mx-4 mb-3 flex items-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-100"
+        >
+          <Hourglass className="size-3.5 shrink-0 animate-hourglass" aria-hidden />
+          <span>{busyCopy.status}</span>
+        </div>
+      ) : null}
 
       {open ? (
         <div className="space-y-4 border-t px-4 py-4">
           <section className="space-y-1.5">
-            <InfoRow label="시설번호" value={facility.facility_code} />
+            <InfoRow
+              label="시설번호"
+              value={facility.facility_code}
+              href={
+                facility.facility_code
+                  ? cpfFacilityUrl(facility.facility_code)
+                  : undefined
+              }
+            />
             <InfoRow label="설치장소" value={facility.place_type} />
             <InfoRow label="지역" value={facility.region} />
             <InfoRow label="실내외" value={facility.indoor_outdoor} />
@@ -290,6 +365,7 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
               photos={facility.visited ? savedAsDraft : draftPhotos}
               onChange={facility.visited || busy ? undefined : setDraftPhotos}
               readOnly={facility.visited || busy}
+              facilityCode={facility.facility_code}
             />
           </section>
           <section>
@@ -307,10 +383,20 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
               type="button"
               onClick={() => void handleClearVisit()}
               disabled={busy}
+              aria-busy={busyKind === "clear"}
               className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 text-sm font-medium text-destructive active:scale-[0.99] disabled:opacity-50"
             >
-              <Trash2 className="size-4" />
-              완료 기록 삭제
+              {busyKind === "clear" ? (
+                <>
+                  <Hourglass className="size-4 animate-hourglass" aria-hidden />
+                  삭제 중…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="size-4" />
+                  완료 기록 삭제
+                </>
+              )}
             </button>
           ) : null}
         </div>

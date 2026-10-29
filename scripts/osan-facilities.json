@@ -266,6 +266,34 @@
     "address": "18127 경기도 오산시 누읍로 17 (누읍동, 한라그린타운아파트)"
   },
   {
+    "no": 67,
+    "facility_code": "1273",
+    "name": "한라그린타운아파트 101동앞 놀이터",
+    "place_type": "주택단지",
+    "region": "누읍동",
+    "indoor_outdoor": "실외",
+    "representative": "백승미",
+    "phone": "031-377-5539",
+    "email": null,
+    "safety_manager": "홍성택",
+    "inspection_status": null,
+    "address": "18127 경기도 오산시 누읍로 17 (누읍동, 한라그린타운아파트)"
+  },
+  {
+    "no": 68,
+    "facility_code": "1274",
+    "name": "한라그린타운아파트 109동앞 놀이터",
+    "place_type": "주택단지",
+    "region": "누읍동",
+    "indoor_outdoor": "실외",
+    "representative": "백승미",
+    "phone": "031-377-5539",
+    "email": null,
+    "safety_manager": "홍성택",
+    "inspection_status": null,
+    "address": "18127 경기도 오산시 누읍로 17 (누읍동, 한라그린타운아파트)"
+  },
+  {
     "no": 20,
     "facility_code": "39061",
     "name": "수청주공아파트",

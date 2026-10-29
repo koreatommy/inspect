@@ -26,6 +26,8 @@ export type OsanPhoto = {
   facility_id: string
   slot: number
   storage_path: string
+  equipment_type: string | null
+  caption: string | null
   created_at: string
 }
 

@@ -41,7 +41,10 @@ async function uploadDraftPhoto(
     throw new Error(`사진 업로드 실패 (${uploadRes.status})`)
   }
 
-  const saveRes = await savePhoto(facilityId, photo.slot, urlRes.data.path)
+  const saveRes = await savePhoto(facilityId, photo.slot, urlRes.data.path, {
+    equipmentType: photo.equipmentType,
+    caption: photo.caption,
+  })
   if (!saveRes.ok) throw new Error(saveRes.error)
   return saveRes.data
 }

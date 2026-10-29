@@ -1,5 +1,23 @@
 /** 오산 페이지 공용 클라이언트 유틸 */
 
+/** 지도 마커·경로선용 설치장소 단색 (필터 칩과 대응) */
+export function placeTypeMarkerColor(placeType: string | null): string {
+  switch (placeType) {
+    case "주택단지":
+      return "#2563eb"
+    case "어린이집":
+      return "#059669"
+    case "놀이제공영업소":
+      return "#7c3aed"
+    case "대규모점포":
+      return "#d97706"
+    case "주상복합":
+      return "#e11d48"
+    default:
+      return "#2563eb"
+  }
+}
+
 export function placeTypeColor(placeType: string | null): string {
   switch (placeType) {
     case "주택단지":
@@ -15,6 +33,12 @@ export function placeTypeColor(placeType: string | null): string {
     default:
       return "bg-muted text-muted-foreground"
   }
+}
+
+/** 어린이놀이시설 안전관리시스템(cpf.go.kr) 시설 상세 — pfctSn = 시설번호 */
+export function cpfFacilityUrl(facilityCode: string): string {
+  const sn = facilityCode.trim()
+  return `https://www.cpf.go.kr/cpf/ko/nori/0006/index.jsp?qr=y&pfctSn=${encodeURIComponent(sn)}`
 }
 
 /** 카카오맵 길찾기(도착지) 딥링크 */

@@ -1,48 +1,59 @@
 "use client"
 
 import { useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from "react"
-import { Camera, ImageIcon, Loader2, Trash2 } from "lucide-react"
+import { Camera, Loader2, Trash2 } from "lucide-react"
 import { toast } from "./toast"
 
 import { MAX_PHOTOS } from "@/lib/osan/constants"
+import { getFacilityEquipment } from "@/lib/osan/facility-equipment"
 import { cn } from "@/lib/utils"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
 import type { DraftPhoto } from "./draft-photo"
 import { compressImage } from "./osan-utils"
+import { PhotoPickerSheet } from "./photo-picker-sheet"
 
 type Props = {
   photos: DraftPhoto[]
   onChange?: Dispatch<SetStateAction<DraftPhoto[]>>
   readOnly?: boolean
+  facilityCode?: string | null
 }
 
 export function revokeDraftPhoto(photo: DraftPhoto) {
   if (photo.blob) URL.revokeObjectURL(photo.previewUrl)
 }
 
-export function PhotoUploader({ photos, onChange, readOnly = false }: Props) {
+export function PhotoUploader({
+  photos,
+  onChange,
+  readOnly = false,
+  facilityCode,
+}: Props) {
   const [busySlot, setBusySlot] = useState<number | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [selectedType, setSelectedType] = useState<string | null>(null)
+  const [caption, setCaption] = useState("")
   const pendingSlotRef = useRef<number>(1)
+  const selectedTypeRef = useRef(selectedType)
+  const captionRef = useRef(caption)
+  selectedTypeRef.current = selectedType
+  captionRef.current = caption
   const picking = busySlot != null
-
+  const equipment = getFacilityEquipment(facilityCode)
   const bySlot = new Map(photos.map((p) => [p.slot, p]))
 
   function openPicker(slot: number) {
     if (readOnly || !onChange || picking) return
     pendingSlotRef.current = slot
+    setSelectedType(null)
+    setCaption("")
     setPickerOpen(true)
   }
 
   async function handleFile(file: File) {
     if (!onChange) return
     const slot = pendingSlotRef.current
+    const equipmentType = selectedTypeRef.current ?? undefined
+    const photoCaption = captionRef.current.trim() || undefined
     setBusySlot(slot)
     try {
       const blob = await compressImage(file)
@@ -52,7 +63,7 @@ export function PhotoUploader({ photos, onChange, readOnly = false }: Props) {
         if (previous) revokeDraftPhoto(previous)
         return [
           ...prev.filter((p) => p.slot !== slot),
-          { slot, previewUrl, blob },
+          { slot, previewUrl, blob, equipmentType, caption: photoCaption },
         ].sort((a, b) => a.slot - b.slot)
       })
     } catch (e) {
@@ -81,43 +92,16 @@ export function PhotoUploader({ photos, onChange, readOnly = false }: Props) {
   return (
     <div>
       {readOnly ? null : (
-        <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
-          <SheetContent
-            side="bottom"
-            showCloseButton={false}
-            className="gap-0 pb-6"
-          >
-            <SheetHeader className="pb-2">
-              <SheetTitle>사진 추가</SheetTitle>
-              <SheetDescription>
-                촬영하거나 앨범에서 선택할 수 있습니다.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="grid grid-cols-2 gap-2 px-4">
-              <label className="relative flex flex-col items-center gap-2 rounded-xl border bg-muted/40 px-3 py-4 text-sm font-medium active:scale-[0.98]">
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="absolute inset-0 cursor-pointer opacity-0"
-                  onChange={onFileChange}
-                />
-                <Camera className="size-6 text-muted-foreground" />
-                촬영
-              </label>
-              <label className="relative flex flex-col items-center gap-2 rounded-xl border bg-muted/40 px-3 py-4 text-sm font-medium active:scale-[0.98]">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="absolute inset-0 cursor-pointer opacity-0"
-                  onChange={onFileChange}
-                />
-                <ImageIcon className="size-6 text-muted-foreground" />
-                앨범
-              </label>
-            </div>
-          </SheetContent>
-        </Sheet>
+        <PhotoPickerSheet
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          equipment={equipment}
+          selectedType={selectedType}
+          onSelectType={setSelectedType}
+          caption={caption}
+          onCaptionChange={setCaption}
+          onFileChange={onFileChange}
+        />
       )}
 
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
@@ -141,6 +125,11 @@ export function PhotoUploader({ photos, onChange, readOnly = false }: Props) {
                     alt={`사진 ${slot}`}
                     className="size-full object-cover"
                   />
+                  {photo.equipmentType ? (
+                    <span className="absolute bottom-1 left-1 right-1 truncate rounded bg-black/60 px-1 py-0.5 text-[10px] text-white">
+                      {photo.equipmentType}
+                    </span>
+                  ) : null}
                   {readOnly ? null : (
                     <button
                       type="button"
@@ -176,6 +165,20 @@ export function PhotoUploader({ photos, onChange, readOnly = false }: Props) {
           )
         })}
       </div>
+
+      {photos.some((photo) => photo.caption) ? (
+        <ul className="mt-2 space-y-1">
+          {photos
+            .filter((photo) => photo.caption)
+            .map((photo) => (
+              <li key={photo.slot} className="text-xs leading-relaxed text-muted-foreground">
+                <span className="font-medium text-foreground">{photo.slot}번</span>
+                {photo.equipmentType ? ` · ${photo.equipmentType}` : ""}
+                {` · ${photo.caption}`}
+              </li>
+            ))}
+        </ul>
+      ) : null}
     </div>
   )
 }

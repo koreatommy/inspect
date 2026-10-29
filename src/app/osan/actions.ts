@@ -39,6 +39,7 @@ export async function savePhoto(
   facilityId: string,
   slot: number,
   storagePath: string,
+  meta?: { equipmentType?: string; caption?: string },
 ): Promise<ActionResult<OsanPhotoWithUrl>> {
   try {
     const client = requireClient()
@@ -54,10 +55,17 @@ export async function savePhoto(
       await client.storage.from(OSAN_BUCKET).remove([existing.storage_path])
     }
 
+    const caption = meta?.caption?.trim() || null
     const { data, error } = await client
       .from("facility_photos")
       .upsert(
-        { facility_id: facilityId, slot, storage_path: storagePath },
+        {
+          facility_id: facilityId,
+          slot,
+          storage_path: storagePath,
+          equipment_type: meta?.equipmentType || null,
+          caption,
+        },
         { onConflict: "facility_id,slot" },
       )
       .select("*")

@@ -6,6 +6,7 @@ import { LocateFixed } from "lucide-react"
 import type { OsanFacilityWithRelations } from "@/lib/osan/types"
 import { optimizeRoute, type LatLng } from "@/lib/osan/route"
 import { spiderfyPositions } from "@/lib/osan/spiderfy"
+import { placeTypeMarkerColor } from "./osan-utils"
 import { useKakaoLoader } from "./use-kakao-loader"
 
 type Props = {
@@ -31,14 +32,26 @@ const MARKER_H = 52
  * CustomOverlay는 카카오 타일/라벨 IMG 아래에 깔려 숫자가 가려진다.
  * MarkerImage(캔버스)는 마커 레이어에 그려져 라벨 위에서도 숫자가 보인다.
  */
+/** 완료 = 회색, 선택 = 검정, 미방문 = 설치장소 색 */
+function markerFill(
+  selected: boolean,
+  visited: boolean,
+  placeType: string | null,
+): string {
+  if (visited) return "#6b7280"
+  if (selected) return "#111827"
+  return placeTypeMarkerColor(placeType)
+}
+
 function createMarkerImage(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   kakaoMaps: any,
   index: number,
   selected: boolean,
   visited: boolean,
+  placeType: string | null,
 ) {
-  const bg = visited ? "#059669" : selected ? "#111827" : "#2563eb"
+  const bg = markerFill(selected, visited, placeType)
   const canvas = document.createElement("canvas")
   canvas.width = MARKER_W
   canvas.height = MARKER_H
@@ -160,12 +173,20 @@ export function RouteMap({
       path.push(new window.kakao.maps.LatLng(display.lat, display.lng))
     }
 
+    const routePlaceTypes = [
+      ...new Set(facilities.map((f) => f.place_type).filter(Boolean)),
+    ]
+    const routeStroke =
+      routePlaceTypes.length === 1
+        ? placeTypeMarkerColor(routePlaceTypes[0] as string)
+        : "#2563eb"
+
     // 경로선은 마커보다 아래(zIndex 낮음)에 그린다.
     if (path.length >= 2) {
       lineRef.current = new window.kakao.maps.Polyline({
         path,
         strokeWeight: 4,
-        strokeColor: "#2563eb",
+        strokeColor: routeStroke,
         strokeOpacity: 0.55,
         strokeStyle: "solid",
         zIndex: 1,
@@ -189,6 +210,7 @@ export function RouteMap({
           index,
           selected,
           facility.visited,
+          facility.place_type,
         ),
         zIndex: selected ? 30 : 10 + index,
         clickable: true,

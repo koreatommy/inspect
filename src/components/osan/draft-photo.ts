@@ -4,4 +4,6 @@ export type DraftPhoto = {
   slot: number
   previewUrl: string
   blob?: Blob
+  equipmentType?: string
+  caption?: string
 }

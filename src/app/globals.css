@@ -368,6 +368,32 @@ html:has(.landing-page) body {
   }
 }
 
+/* Hourglass flip — osan 점검완료 등 대기 상태 */
+@keyframes hourglass-flip {
+  0%,
+  35% {
+    transform: rotate(0deg);
+  }
+  50%,
+  85% {
+    transform: rotate(180deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-hourglass {
+  animation: hourglass-flip 1.4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hourglass {
+    animation: none;
+  }
+}
+
 /* Landing floating animation */
 @keyframes floatY {
   0%, 100% { transform: translateY(0); }
