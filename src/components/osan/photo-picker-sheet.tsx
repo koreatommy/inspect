@@ -12,6 +12,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import { EquipmentTypeChips } from "./equipment-type-chips"
+import { toast } from "./toast"
 
 type Props = {
   open: boolean
@@ -48,11 +50,24 @@ export function PhotoPickerSheet({
         <SheetHeader className="pb-2">
           <SheetTitle>사진 추가</SheetTitle>
           <SheetDescription>
-            촬영하거나 앨범에서 선택할 수 있습니다.
+            {requiresType
+              ? "기구유형 또는 공통 항목을 고른 뒤 촬영하거나 앨범에서 선택하세요."
+              : "촬영하거나 앨범에서 선택할 수 있습니다."}
           </SheetDescription>
         </SheetHeader>
 
-        <div className="grid grid-cols-2 gap-2 px-4">
+        <section className="px-4">
+          <EquipmentTypeChips
+            types={types}
+            selected={selectedType}
+            onSelect={onSelectType}
+            showSectionHeaders
+            totalCount={equipment?.totalCount}
+            emptyMessage="이 시설에 등록된 기구유형이 없습니다."
+          />
+        </section>
+
+        <div className="grid grid-cols-2 gap-2 px-4 pt-4">
           <CaptureOption
             label="촬영"
             icon={<Camera className="size-6 text-muted-foreground" />}
@@ -69,47 +84,9 @@ export function PhotoPickerSheet({
         </div>
         {requiresType && !selectedType ? (
           <p className="px-4 pt-2 text-xs text-amber-700 dark:text-amber-300">
-            기구유형을 선택한 뒤 촬영하거나 앨범에서 고를 수 있습니다.
+            위에서 유형을 선택하면 촬영·앨범을 사용할 수 있습니다.
           </p>
         ) : null}
-
-        <section className="space-y-2 px-4 pt-4">
-          <div className="flex items-baseline justify-between gap-2">
-            <h3 className="text-sm font-medium">기구유형</h3>
-            {equipment ? (
-              <span className="text-[11px] text-muted-foreground">
-                총 {equipment.totalCount}개 기구
-              </span>
-            ) : null}
-          </div>
-          {types.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
-              {types.map((type) => {
-                const selected = selectedType === type
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => onSelectType(type)}
-                    aria-pressed={selected}
-                    className={cn(
-                      "rounded-full border px-2.5 py-1.5 text-xs font-medium",
-                      selected
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-input bg-muted/40 text-foreground",
-                    )}
-                  >
-                    {type}
-                  </button>
-                )
-              })}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              이 시설에 등록된 기구유형이 없습니다.
-            </p>
-          )}
-        </section>
 
         <section className="space-y-2 px-4 pt-4">
           <h3 className="text-sm font-medium">사진 점검내용</h3>
@@ -145,6 +122,14 @@ function CaptureOption({
         "relative flex flex-col items-center gap-2 rounded-xl border bg-muted/40 px-3 py-4 text-sm font-medium",
         disabled ? "opacity-50" : "active:scale-[0.98]",
       )}
+      onClick={
+        disabled
+          ? (e) => {
+              e.preventDefault()
+              toast.error("유형을 먼저 선택해 주세요.")
+            }
+          : undefined
+      }
     >
       {disabled ? null : (
         <input

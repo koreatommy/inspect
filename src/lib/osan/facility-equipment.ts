@@ -459,9 +459,40 @@ export const FACILITY_EQUIPMENT: Record<string, FacilityEquipment> = {
   },
 }
 
+/** 모든 시설 사진에 공통으로 붙일 수 있는 유형 (놀이기구와 구분) */
+export const COMMON_EQUIPMENT_TYPES = [
+  "전경",
+  "안전수칙판",
+  "기타(부대시설)",
+] as const
+
+const COMMON_EQUIPMENT_TYPE_SET = new Set<string>(COMMON_EQUIPMENT_TYPES)
+
+export function isCommonEquipmentType(type: string): boolean {
+  return COMMON_EQUIPMENT_TYPE_SET.has(type)
+}
+
+export function splitEquipmentTypes(types: string[]): {
+  equipmentTypes: string[]
+  commonTypes: string[]
+} {
+  return {
+    equipmentTypes: types.filter((type) => !isCommonEquipmentType(type)),
+    commonTypes: COMMON_EQUIPMENT_TYPES.filter((type) => types.includes(type)),
+  }
+}
+
 export function getFacilityEquipment(
   facilityCode: string | null | undefined,
 ): FacilityEquipment | null {
   if (!facilityCode) return null
-  return FACILITY_EQUIPMENT[facilityCode] ?? null
+  const equipment = FACILITY_EQUIPMENT[facilityCode]
+  if (!equipment) return null
+
+  const types = [...equipment.types]
+  for (const common of COMMON_EQUIPMENT_TYPES) {
+    if (!types.includes(common)) types.push(common)
+  }
+
+  return { ...equipment, types }
 }

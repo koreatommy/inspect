@@ -13,9 +13,9 @@ import { toast } from "./toast"
 import { MAX_PHOTOS } from "@/lib/osan/constants"
 import { getFacilityEquipment } from "@/lib/osan/facility-equipment"
 import type { OsanPhotoWithUrl } from "@/lib/osan/types"
-import { cn } from "@/lib/utils"
 import type { DraftPhoto } from "./draft-photo"
 import { compressImage } from "./osan-utils"
+import { EquipmentTypeChips } from "./equipment-type-chips"
 import { PhotoPickerSheet } from "./photo-picker-sheet"
 import { revokeDraftPhoto } from "./photo-uploader"
 
@@ -46,48 +46,6 @@ export function photoMetaDraftsFromPhotos(
         caption: photo.caption ?? "",
       },
     ]),
-  )
-}
-
-function EquipmentChips({
-  types,
-  selected,
-  disabled,
-  onSelect,
-}: {
-  types: string[]
-  selected: string | null | undefined
-  disabled?: boolean
-  onSelect: (type: string) => void
-}) {
-  if (types.length === 0) {
-    return (
-      <p className="text-xs text-muted-foreground">등록된 기구유형이 없습니다.</p>
-    )
-  }
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {types.map((type) => {
-        const isSelected = selected === type
-        return (
-          <button
-            key={type}
-            type="button"
-            disabled={disabled}
-            onClick={() => onSelect(type)}
-            aria-pressed={isSelected}
-            className={cn(
-              "rounded-full border px-2 py-1 text-[11px] font-medium disabled:opacity-50",
-              isSelected
-                ? "border-foreground bg-foreground text-background"
-                : "border-input bg-background text-foreground",
-            )}
-          >
-            {type}
-          </button>
-        )
-      })}
-    </div>
   )
 }
 
@@ -192,7 +150,7 @@ export function PhotoMetaEditor({
 
       {equipment ? (
         <p className="text-[11px] text-muted-foreground">
-          총 {equipment.totalCount}개 기구 · 사진마다 기구유형 1개를 선택하세요
+          총 {equipment.totalCount}개 기구 · 사진마다 기구유형 또는 공통 항목 1개를 선택하세요
         </p>
       ) : null}
 
@@ -228,10 +186,11 @@ export function PhotoMetaEditor({
                 <p className="text-xs font-medium text-muted-foreground">
                   {photo.slot}번 사진
                 </p>
-                <EquipmentChips
+                <EquipmentTypeChips
                   types={types}
                   selected={draft.equipmentType}
                   disabled={disabled}
+                  size="sm"
                   onSelect={(type) =>
                     onChange(photo.id, { ...draft, equipmentType: type })
                   }
@@ -284,10 +243,11 @@ export function PhotoMetaEditor({
               <p className="text-xs font-medium text-muted-foreground">
                 {photo.slot}번 사진 · 추가
               </p>
-              <EquipmentChips
+              <EquipmentTypeChips
                 types={types}
                 selected={photo.equipmentType}
                 disabled={disabled}
+                size="sm"
                 onSelect={(type) =>
                   patchAddedPhoto(photo.slot, { equipmentType: type })
                 }
