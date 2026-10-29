@@ -35,6 +35,19 @@ export function formatEquipmentChipLabel(item: FacilityEquipmentItem): string {
   return `${item.type} (${item.equipmentNo})`
 }
 
+/** 칩 라벨을 표시용 이름·기구번호로 분리 (`유형 (번호)` / 공통은 번호 없음) */
+export function parseEquipmentChipLabel(label: string): {
+  name: string
+  equipmentNo: string | null
+} {
+  if (isCommonEquipmentType(label)) {
+    return { name: label, equipmentNo: null }
+  }
+  const match = label.match(/^(.*) \(([^)]+)\)$/)
+  if (!match) return { name: label, equipmentNo: null }
+  return { name: match[1], equipmentNo: match[2] }
+}
+
 export function isCommonEquipmentType(type: string): boolean {
   return COMMON_EQUIPMENT_TYPE_SET.has(type)
 }

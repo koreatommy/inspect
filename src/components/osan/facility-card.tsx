@@ -12,9 +12,19 @@ import {
   toggleVisited,
   updateNote,
   updatePhotoMeta,
+  updateVisitDetails,
   type FacilityContactField,
 } from "@/app/osan/actions"
 import { getFacilityEquipment } from "@/lib/osan/facility-equipment"
+import {
+  defaultInspectionDate,
+  isoToKoreaDate,
+  koreaDateToIsoWithNowTime,
+} from "@/lib/osan/inspection-at"
+import {
+  getLastOsanInspector,
+  setLastOsanInspector,
+} from "@/lib/osan/inspectors"
 import type {
   OsanFacilityWithRelations,
   OsanNote,
@@ -88,6 +98,12 @@ export function FacilityCard({
   const [busyKind, setBusyKind] = useState<BusyKind | null>(null)
   const [draftPhotos, setDraftPhotos] = useState<DraftPhoto[]>([])
   const [draftNote, setDraftNote] = useState("")
+  const [inspectorDraft, setInspectorDraft] = useState<string | null>(
+    () => facility.inspector_name ?? getLastOsanInspector(),
+  )
+  const [inspectedDateDraft, setInspectedDateDraft] = useState<string | null>(
+    () => isoToKoreaDate(facility.inspected_at) ?? defaultInspectionDate(),
+  )
   const [editingMeta, setEditingMeta] = useState(false)
   const [metaDrafts, setMetaDrafts] = useState<Record<string, PhotoMetaDraft>>(
     {},
@@ -116,6 +132,13 @@ export function FacilityCard({
   }, [selected])
 
   useEffect(() => {
+    setInspectorDraft(facility.inspector_name ?? getLastOsanInspector())
+    setInspectedDateDraft(
+      isoToKoreaDate(facility.inspected_at) ?? defaultInspectionDate(),
+    )
+  }, [facility.id, facility.inspector_name, facility.inspected_at])
+
+  useEffect(() => {
     return () => {
       draftPhotosRef.current.forEach(revokeDraftPhoto)
       editAddedPhotosRef.current.forEach(revokeDraftPhoto)
@@ -126,6 +149,15 @@ export function FacilityCard({
     draftPhotosRef.current.forEach(revokeDraftPhoto)
     setDraftPhotos([])
     setDraftNote("")
+  }
+
+  function handleInspectorChange(value: string) {
+    setInspectorDraft(value)
+    setLastOsanInspector(value)
+  }
+
+  function handleInspectedDateChange(value: string) {
+    setInspectedDateDraft(value)
   }
 
   function clearEditAddedPhotos() {
@@ -186,6 +218,26 @@ export function FacilityCard({
     const remainingPhotos = facility.photos.filter(
       (photo) => !pendingDeleteIds.includes(photo.id),
     )
+    const trimmedInspector = inspectorDraft?.trim() ?? ""
+    if (!trimmedInspector) {
+      toast.error("점검자를 선택해 주세요.")
+      return
+    }
+    const dateChanged =
+      (inspectedDateDraft ?? "") !==
+      (isoToKoreaDate(facility.inspected_at) ?? "")
+    const inspectedAtIso = dateChanged
+      ? inspectedDateDraft
+        ? koreaDateToIsoWithNowTime(inspectedDateDraft)
+        : null
+      : (facility.inspected_at ??
+        (inspectedDateDraft
+          ? koreaDateToIsoWithNowTime(inspectedDateDraft)
+          : null))
+    if (!inspectedAtIso) {
+      toast.error("점검일을 선택해 주세요.")
+      return
+    }
     if (
       requiresEquipment &&
       remainingPhotos.some((photo) => !metaDrafts[photo.id]?.equipmentType)
@@ -205,7 +257,21 @@ export function FacilityCard({
     const updated: OsanPhotoWithUrl[] = []
     const newlyUploaded: OsanPhotoWithUrl[] = []
     const deletedIds: string[] = []
+    let nextInspector = facility.inspector_name
+    let nextInspectedAt = facility.inspected_at
     try {
+      const inspectorChanged =
+        trimmedInspector !== (facility.inspector_name ?? "")
+      if (inspectorChanged || dateChanged) {
+        const detailsRes = await updateVisitDetails(facility.id, {
+          inspectorName: trimmedInspector,
+          inspectedAt: inspectedAtIso,
+        })
+        if (!detailsRes.ok) throw new Error(detailsRes.error)
+        nextInspector = detailsRes.data.inspector_name
+        nextInspectedAt = detailsRes.data.inspected_at
+        setLastOsanInspector(nextInspector)
+      }
       for (const photoId of pendingDeleteIds) {
         const res = await deletePhoto(photoId)
         if (!res.ok) throw new Error(res.error)
@@ -273,6 +339,8 @@ export function FacilityCard({
         ...facility,
         photos: updated.sort((a, b) => a.slot - b.slot),
         notes: nextNotes,
+        inspector_name: nextInspector,
+        inspected_at: nextInspectedAt,
       })
       setEditingMeta(false)
       setMetaDrafts({})
@@ -285,6 +353,8 @@ export function FacilityCard({
       if (deletedIds.length > 0) parts.push(`${deletedIds.length}장 삭제`)
       if (newlyUploaded.length > 0) parts.push(`${newlyUploaded.length}장 추가`)
       if (notesChanged) parts.push("기타 의견")
+      if (nextInspector !== facility.inspector_name) parts.push("점검자")
+      if (dateChanged) parts.push("점검일")
       toast.success(
         parts.length > 0
           ? `저장 완료 · ${parts.join(" · ")}`
@@ -318,6 +388,18 @@ export function FacilityCard({
       return
     }
 
+    const trimmedInspector = inspectorDraft?.trim() ?? ""
+    if (!trimmedInspector) {
+      toast.error("점검자를 선택해 주세요.")
+      return
+    }
+    const inspectedAtIso = inspectedDateDraft
+      ? koreaDateToIsoWithNowTime(inspectedDateDraft)
+      : null
+    if (!inspectedAtIso) {
+      toast.error("점검일을 선택해 주세요.")
+      return
+    }
     if (draftPhotos.length === 0 && !draftNote.trim()) {
       toast.error("사진 또는 점검내용을 입력해 주세요.")
       return
@@ -332,6 +414,8 @@ export function FacilityCard({
       facilityId: facility.id,
       photos: draftPhotos,
       note: draftNote,
+      inspectorName: trimmedInspector,
+      inspectedAt: inspectedAtIso,
     })
     setBusyKind(null)
     if (!res.ok) {
@@ -341,12 +425,15 @@ export function FacilityCard({
 
     const savedPhotos = mergePhotosBySlot(facility.photos, res.photos)
     const savedNotes = res.note ? [res.note, ...facility.notes] : facility.notes
+    setLastOsanInspector(res.inspectorName)
     clearDrafts()
     onChange({
       ...facility,
       visited: true,
       photos: savedPhotos,
       notes: savedNotes,
+      inspector_name: res.inspectorName,
+      inspected_at: res.inspectedAt,
     })
     toast.success("점검 완료")
   }
@@ -371,7 +458,16 @@ export function FacilityCard({
     setEditNoteDraft("")
     clearEditAddedPhotos()
     setPendingDeleteIds([])
-    onChange({ ...facility, visited: false, photos: [], notes: [] })
+    onChange({
+      ...facility,
+      visited: false,
+      photos: [],
+      notes: [],
+      inspector_name: null,
+      inspected_at: null,
+    })
+    setInspectorDraft(getLastOsanInspector())
+    setInspectedDateDraft(defaultInspectionDate())
     toast.success("완료 기록을 삭제했습니다")
   }
 
@@ -495,6 +591,10 @@ export function FacilityCard({
           setDraftPhotos={setDraftPhotos}
           draftNote={draftNote}
           setDraftNote={setDraftNote}
+          inspectorName={inspectorDraft}
+          onInspectorChange={handleInspectorChange}
+          inspectedDate={inspectedDateDraft}
+          onInspectedDateChange={handleInspectedDateChange}
           savedAsDraft={savedAsDraft}
           editingMeta={editingMeta}
           metaDrafts={metaDrafts}

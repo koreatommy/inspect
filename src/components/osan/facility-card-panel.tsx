@@ -11,6 +11,8 @@ import type {
 } from "@/lib/osan/types"
 import type { DraftPhoto } from "./draft-photo"
 import { FacilityContactSection } from "./facility-contact-section"
+import { InspectionAtPicker } from "./inspection-at-picker"
+import { InspectorSelect } from "./inspector-select"
 import { MemoSection } from "./memo-section"
 import {
   PhotoMetaEditor,
@@ -28,6 +30,10 @@ type Props = {
   setDraftPhotos: Dispatch<SetStateAction<DraftPhoto[]>>
   draftNote: string
   setDraftNote: (value: string) => void
+  inspectorName: string | null
+  onInspectorChange: (value: string) => void
+  inspectedDate: string | null
+  onInspectedDateChange: (value: string) => void
   savedAsDraft: DraftPhoto[]
   editingMeta: boolean
   metaDrafts: Record<string, PhotoMetaDraft>
@@ -91,6 +97,10 @@ export function FacilityCardPanel({
   setDraftPhotos,
   draftNote,
   setDraftNote,
+  inspectorName,
+  onInspectorChange,
+  inspectedDate,
+  onInspectedDateChange,
   savedAsDraft,
   editingMeta,
   metaDrafts,
@@ -203,6 +213,28 @@ export function FacilityCardPanel({
       </section>
       <section>
         <h4 className="mb-2 text-sm font-medium">기타 점검 의견</h4>
+        <div className="mb-2 grid grid-cols-2 gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="shrink-0 text-xs text-muted-foreground">점검자</span>
+            <div className="min-w-0 flex-1">
+              <InspectorSelect
+                value={inspectorName}
+                onChange={onInspectorChange}
+                disabled={busy}
+                readOnly={facility.visited && !editingMeta}
+              />
+            </div>
+          </div>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="shrink-0 text-xs text-muted-foreground">점검일</span>
+            <InspectionAtPicker
+              value={inspectedDate}
+              onChange={onInspectedDateChange}
+              disabled={busy}
+              readOnly={facility.visited && !editingMeta}
+            />
+          </div>
+        </div>
         <MemoSection
           notes={facility.notes}
           draft={editingMeta ? editNoteDraft : draftNote}

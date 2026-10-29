@@ -285,9 +285,8 @@ export function OsanApp({ initialFacilities }: Props) {
       <header className="sticky top-0 z-20 border-b bg-background/95 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur lg:static lg:shrink-0 lg:px-6">
         <div className="space-y-2 lg:flex lg:items-end lg:justify-between lg:gap-8 lg:space-y-0">
           <div className="min-w-0 lg:max-w-md">
-            <p className="text-xs text-muted-foreground">오산시 지도점검</p>
             <div className="flex items-baseline justify-between gap-3">
-              <h1 className="text-lg font-semibold">현장 방문</h1>
+              <h1 className="text-lg font-semibold">지도점검(오산시)</h1>
               <time
                 dateTime={todayIso}
                 className="shrink-0 text-sm tabular-nums text-muted-foreground"

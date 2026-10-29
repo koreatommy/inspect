@@ -233,15 +233,87 @@ export async function saveFacilityCoords(
 export async function toggleVisited(
   facilityId: string,
   visited: boolean,
-): Promise<ActionResult<{ id: string; visited: boolean }>> {
+  details?: { inspectorName?: string | null; inspectedAt?: string | null },
+): Promise<
+  ActionResult<{
+    id: string
+    visited: boolean
+    inspector_name: string | null
+    inspected_at: string | null
+  }>
+> {
   try {
+    const client = requireClient()
+    const patch: {
+      visited: boolean
+      inspector_name?: string | null
+      inspected_at?: string | null
+    } = { visited }
+    if (visited) {
+      const name = details?.inspectorName?.trim() ?? ""
+      if (!name) {
+        return { ok: false, error: "점검자를 선택해 주세요." }
+      }
+      const inspectedAt = details?.inspectedAt?.trim() ?? ""
+      if (!inspectedAt || Number.isNaN(new Date(inspectedAt).getTime())) {
+        return { ok: false, error: "점검일을 선택해 주세요." }
+      }
+      patch.inspector_name = name
+      patch.inspected_at = inspectedAt
+    }
+    const { error } = await client
+      .from("facilities")
+      .update(patch)
+      .eq("id", facilityId)
+    if (error) return { ok: false, error: error.message }
+    return {
+      ok: true,
+      data: {
+        id: facilityId,
+        visited,
+        inspector_name: visited
+          ? (details?.inspectorName?.trim() ?? null)
+          : null,
+        inspected_at: visited ? (details?.inspectedAt?.trim() ?? null) : null,
+      },
+    }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "오류" }
+  }
+}
+
+/** 점검 완료 기록의 점검자·점검일시 갱신 */
+export async function updateVisitDetails(
+  facilityId: string,
+  details: { inspectorName: string; inspectedAt: string },
+): Promise<
+  ActionResult<{
+    id: string
+    inspector_name: string
+    inspected_at: string
+  }>
+> {
+  try {
+    const name = details.inspectorName.trim()
+    if (!name) return { ok: false, error: "점검자를 선택해 주세요." }
+    const inspectedAt = details.inspectedAt.trim()
+    if (!inspectedAt || Number.isNaN(new Date(inspectedAt).getTime())) {
+      return { ok: false, error: "점검일을 선택해 주세요." }
+    }
     const client = requireClient()
     const { error } = await client
       .from("facilities")
-      .update({ visited })
+      .update({ inspector_name: name, inspected_at: inspectedAt })
       .eq("id", facilityId)
     if (error) return { ok: false, error: error.message }
-    return { ok: true, data: { id: facilityId, visited } }
+    return {
+      ok: true,
+      data: {
+        id: facilityId,
+        inspector_name: name,
+        inspected_at: inspectedAt,
+      },
+    }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "오류" }
   }
@@ -332,7 +404,7 @@ export async function clearVisitRecord(
 
     const { error: visitError } = await client
       .from("facilities")
-      .update({ visited: false })
+      .update({ visited: false, inspector_name: null, inspected_at: null })
       .eq("id", facilityId)
     if (visitError) return { ok: false, error: visitError.message }
 

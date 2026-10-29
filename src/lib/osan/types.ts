@@ -17,6 +17,10 @@ export type OsanFacility = {
   lat: number | null
   lng: number | null
   visited: boolean
+  /** 점검 완료 시 선택한 점검자 */
+  inspector_name: string | null
+  /** 점검 완료 시 선택한 점검일시 */
+  inspected_at: string | null
   created_at: string
   updated_at: string
 }
