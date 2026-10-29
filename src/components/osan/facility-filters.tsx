@@ -69,14 +69,17 @@ export function FacilityFilters({
         <span className="min-w-0 truncate text-foreground">
           {visitedLabel(visited)} · {placeType}
         </span>
-        <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
-          <span className="tabular-nums">{resultCount}곳</span>
-          <ChevronDown
-            className={cn(
-              "size-4 transition-transform",
-              expanded && "rotate-180",
-            )}
-          />
+        <span className="flex shrink-0 items-center gap-2">
+          <span className="tabular-nums text-muted-foreground">{resultCount}곳</span>
+          <span className="flex size-7 items-center justify-center rounded-md border border-red-500/40 bg-red-500/10 text-red-600 shadow-sm dark:border-red-400/40 dark:bg-red-400/10 dark:text-red-400">
+            <ChevronDown
+              strokeWidth={2.75}
+              className={cn(
+                "size-5 transition-transform",
+                expanded && "rotate-180",
+              )}
+            />
+          </span>
         </span>
       </button>
 

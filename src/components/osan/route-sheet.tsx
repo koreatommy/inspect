@@ -45,9 +45,15 @@ export function RouteSheet({
             직선 거리 합 {formatDistance(totalMeters)} · 차량 길찾기는 각 시설에서
           </p>
         </div>
-        <ChevronDown
-          className={cn("size-5 transition-transform", !open && "rotate-180")}
-        />
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-red-500/40 bg-red-500/10 text-red-600 shadow-sm dark:border-red-400/40 dark:bg-red-400/10 dark:text-red-400">
+          <ChevronDown
+            strokeWidth={2.75}
+            className={cn(
+              "size-6 transition-transform",
+              !open && "rotate-180",
+            )}
+          />
+        </span>
       </button>
       {open ? (
         <ol className="pointer-events-auto min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-3">
