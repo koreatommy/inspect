@@ -272,6 +272,52 @@ export function FacilityCardPanel({
             )}
           </button>
         </div>
+      ) : facility.visited ? (
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={onVisitedClick}
+            disabled={busy}
+            aria-busy={busyKind === "complete" || busyKind === "undo"}
+            className={cn(
+              "flex h-11 items-center justify-center gap-1 rounded-xl text-sm font-medium disabled:opacity-80",
+              busyKind === "complete" || busyKind === "undo"
+                ? "bg-amber-600 text-white"
+                : "bg-emerald-600 text-white",
+            )}
+          >
+            {busyKind === "complete" || busyKind === "undo" ? (
+              <>
+                <Hourglass className="size-4 animate-hourglass" aria-hidden />
+                {busyKind === "complete" ? "저장 중…" : "변경 중…"}
+              </>
+            ) : (
+              <>
+                <Check className="size-4" />
+                완료됨
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={onClearVisit}
+            disabled={busy}
+            aria-busy={busyKind === "clear"}
+            className="flex h-11 items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 text-sm font-medium text-destructive active:scale-[0.99] disabled:opacity-50"
+          >
+            {busyKind === "clear" ? (
+              <>
+                <Hourglass className="size-4 animate-hourglass" aria-hidden />
+                삭제 중…
+              </>
+            ) : (
+              <>
+                <Trash2 className="size-4" />
+                완료 기록 삭제
+              </>
+            )}
+          </button>
+        </div>
       ) : (
         <button
           type="button"
@@ -282,9 +328,7 @@ export function FacilityCardPanel({
             "flex h-11 w-full items-center justify-center gap-1 rounded-xl text-sm font-medium disabled:opacity-80",
             busyKind === "complete" || busyKind === "undo"
               ? "bg-amber-600 text-white"
-              : facility.visited
-                ? "bg-emerald-600 text-white"
-                : "bg-foreground text-background",
+              : "bg-foreground text-background",
           )}
         >
           {busyKind === "complete" || busyKind === "undo" ? (
@@ -295,32 +339,11 @@ export function FacilityCardPanel({
           ) : (
             <>
               <Check className="size-4" />
-              {facility.visited ? "완료됨" : "점검기록"}
+              점검기록
             </>
           )}
         </button>
       )}
-      {facility.visited && !editingMeta ? (
-        <button
-          type="button"
-          onClick={onClearVisit}
-          disabled={busy}
-          aria-busy={busyKind === "clear"}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 text-sm font-medium text-destructive active:scale-[0.99] disabled:opacity-50"
-        >
-          {busyKind === "clear" ? (
-            <>
-              <Hourglass className="size-4 animate-hourglass" aria-hidden />
-              삭제 중…
-            </>
-          ) : (
-            <>
-              <Trash2 className="size-4" />
-              완료 기록 삭제
-            </>
-          )}
-        </button>
-      ) : null}
     </div>
   )
 }
