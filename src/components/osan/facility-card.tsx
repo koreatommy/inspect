@@ -1,10 +1,15 @@
 "use client"
 
-import { useEffect, useRef, useState, type ReactNode } from "react"
-import { Check, Copy, Hourglass, MapPinned, Phone, Trash2 } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Check, Copy, Hourglass, Phone } from "lucide-react"
 import { toast } from "./toast"
 
-import { clearVisitRecord, toggleVisited } from "@/app/osan/actions"
+import {
+  clearVisitRecord,
+  deletePhoto,
+  toggleVisited,
+  updatePhotoMeta,
+} from "@/app/osan/actions"
 import { getFacilityEquipment } from "@/lib/osan/facility-equipment"
 import type {
   OsanFacilityWithRelations,
@@ -12,18 +17,18 @@ import type {
 } from "@/lib/osan/types"
 import { cn } from "@/lib/utils"
 import type { DraftPhoto } from "./draft-photo"
-import { MemoSection } from "./memo-section"
-import { persistInspection } from "./persist-inspection"
-import { PhotoUploader, revokeDraftPhoto } from "./photo-uploader"
-import { RouteNavLinks } from "./route-nav-links"
+import { FacilityCardPanel } from "./facility-card-panel"
 import {
-  addressWithoutPostal,
-  cpfFacilityUrl,
-  kakaoRouteUrl,
-  placeTypeColor,
-} from "./osan-utils"
+  photoMetaDraftsFromPhotos,
+  type PhotoMetaDraft,
+} from "./photo-meta-editor"
+import { persistInspection } from "./persist-inspection"
+import { revokeDraftPhoto } from "./photo-uploader"
+import { RouteNavLinks } from "./route-nav-links"
+import { uploadDraftPhoto } from "./upload-draft-photo"
+import { addressWithoutPostal, placeTypeColor } from "./osan-utils"
 
-type BusyKind = "complete" | "undo" | "clear"
+type BusyKind = "complete" | "undo" | "clear" | "saveMeta"
 
 const BUSY_COPY: Record<BusyKind, { button: string; status: string }> = {
   complete: {
@@ -38,6 +43,10 @@ const BUSY_COPY: Record<BusyKind, { button: string; status: string }> = {
     button: "삭제 중…",
     status: "완료 기록을 삭제하고 있습니다",
   },
+  saveMeta: {
+    button: "저장 중…",
+    status: "사진 기구유형·점검내용을 저장하고 있습니다",
+  },
 }
 
 type Props = {
@@ -45,39 +54,6 @@ type Props = {
   order?: number
   defaultOpen?: boolean
   onChange: (next: OsanFacilityWithRelations) => void
-}
-
-function InfoRow({
-  label,
-  value,
-  action,
-  href,
-}: {
-  label: string
-  value: string | null
-  action?: ReactNode
-  /** 있으면 값에 새 창 링크를 건다 */
-  href?: string
-}) {
-  if (!value) return null
-  return (
-    <div className="flex gap-2 text-sm">
-      <span className="w-16 shrink-0 text-muted-foreground">{label}</span>
-      {href ? (
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="min-w-0 flex-1 break-words text-primary underline-offset-2 hover:underline"
-        >
-          {value}
-        </a>
-      ) : (
-        <span className="min-w-0 flex-1 break-words">{value}</span>
-      )}
-      {action}
-    </div>
-  )
 }
 
 function mergePhotosBySlot(
@@ -94,15 +70,31 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
   const [busyKind, setBusyKind] = useState<BusyKind | null>(null)
   const [draftPhotos, setDraftPhotos] = useState<DraftPhoto[]>([])
   const [draftNote, setDraftNote] = useState("")
+  const [editingMeta, setEditingMeta] = useState(false)
+  const [metaDrafts, setMetaDrafts] = useState<Record<string, PhotoMetaDraft>>(
+    {},
+  )
+  const [editAddedPhotos, setEditAddedPhotos] = useState<DraftPhoto[]>([])
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([])
   const draftPhotosRef = useRef(draftPhotos)
+  const editAddedPhotosRef = useRef(editAddedPhotos)
   draftPhotosRef.current = draftPhotos
+  editAddedPhotosRef.current = editAddedPhotos
   const busy = busyKind != null
   const busyCopy = busyKind ? BUSY_COPY[busyKind] : null
   const hasCoords = facility.lat != null && facility.lng != null
+  const canEditPhotoMeta = facility.visited
+  const requiresEquipment = Boolean(
+    getFacilityEquipment(facility.facility_code)?.types.length,
+  )
+  const editablePhotos = facility.photos.filter(
+    (photo) => !pendingDeleteIds.includes(photo.id),
+  )
 
   useEffect(() => {
     return () => {
       draftPhotosRef.current.forEach(revokeDraftPhoto)
+      editAddedPhotosRef.current.forEach(revokeDraftPhoto)
     }
   }, [])
 
@@ -110,6 +102,128 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
     draftPhotosRef.current.forEach(revokeDraftPhoto)
     setDraftPhotos([])
     setDraftNote("")
+  }
+
+  function clearEditAddedPhotos() {
+    editAddedPhotosRef.current.forEach(revokeDraftPhoto)
+    setEditAddedPhotos([])
+  }
+
+  function startMetaEdit() {
+    if (busy) return
+    setMetaDrafts(photoMetaDraftsFromPhotos(facility.photos))
+    clearEditAddedPhotos()
+    setPendingDeleteIds([])
+    setEditingMeta(true)
+    setOpen(true)
+  }
+
+  function cancelMetaEdit() {
+    if (busy) return
+    setEditingMeta(false)
+    setMetaDrafts({})
+    clearEditAddedPhotos()
+    setPendingDeleteIds([])
+  }
+
+  function patchMetaDraft(photoId: string, next: PhotoMetaDraft) {
+    setMetaDrafts((prev) => ({ ...prev, [photoId]: next }))
+  }
+
+  function markSavedPhotoDeleted(photoId: string) {
+    if (busy) return
+    setPendingDeleteIds((prev) =>
+      prev.includes(photoId) ? prev : [...prev, photoId],
+    )
+    setMetaDrafts((prev) => {
+      const next = { ...prev }
+      delete next[photoId]
+      return next
+    })
+  }
+
+  async function saveMetaEdit() {
+    if (busy || !editingMeta) return
+    const remainingPhotos = facility.photos.filter(
+      (photo) => !pendingDeleteIds.includes(photo.id),
+    )
+    if (
+      requiresEquipment &&
+      remainingPhotos.some((photo) => !metaDrafts[photo.id]?.equipmentType)
+    ) {
+      toast.error("각 사진의 기구유형을 선택해 주세요.")
+      return
+    }
+    if (
+      requiresEquipment &&
+      editAddedPhotos.some((photo) => !photo.equipmentType)
+    ) {
+      toast.error("추가 사진의 기구유형을 선택해 주세요.")
+      return
+    }
+
+    setBusyKind("saveMeta")
+    const updated: OsanPhotoWithUrl[] = []
+    const newlyUploaded: OsanPhotoWithUrl[] = []
+    const deletedIds: string[] = []
+    try {
+      for (const photoId of pendingDeleteIds) {
+        const res = await deletePhoto(photoId)
+        if (!res.ok) throw new Error(res.error)
+        deletedIds.push(photoId)
+      }
+
+      for (const photo of remainingPhotos) {
+        const draft = metaDrafts[photo.id]
+        if (!draft) {
+          updated.push(photo)
+          continue
+        }
+        const sameType =
+          (photo.equipment_type ?? null) === (draft.equipmentType ?? null)
+        const sameCaption =
+          (photo.caption ?? "") === (draft.caption.trim() || "")
+        if (sameType && sameCaption) {
+          updated.push(photo)
+          continue
+        }
+        const res = await updatePhotoMeta(photo.id, {
+          equipmentType: draft.equipmentType,
+          caption: draft.caption,
+        })
+        if (!res.ok) throw new Error(res.error)
+        updated.push(res.data)
+      }
+
+      for (const photo of editAddedPhotos) {
+        const uploaded = await uploadDraftPhoto(facility.id, photo)
+        newlyUploaded.push(uploaded)
+        updated.push(uploaded)
+      }
+
+      onChange({
+        ...facility,
+        photos: updated.sort((a, b) => a.slot - b.slot),
+      })
+      setEditingMeta(false)
+      setMetaDrafts({})
+      clearEditAddedPhotos()
+      setPendingDeleteIds([])
+
+      const parts: string[] = []
+      if (deletedIds.length > 0) parts.push(`${deletedIds.length}장 삭제`)
+      if (newlyUploaded.length > 0) parts.push(`${newlyUploaded.length}장 추가`)
+      toast.success(
+        parts.length > 0
+          ? `사진 정보 저장 · ${parts.join(" · ")}`
+          : "사진 정보를 저장했습니다",
+      )
+    } catch (e) {
+      await Promise.all(newlyUploaded.map((photo) => deletePhoto(photo.id)))
+      toast.error(e instanceof Error ? e.message : "저장 실패")
+    } finally {
+      setBusyKind(null)
+    }
   }
 
   async function handleVisitedClick() {
@@ -132,9 +246,6 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
       toast.error("사진 또는 점검내용을 입력해 주세요.")
       return
     }
-    const requiresEquipment = Boolean(
-      getFacilityEquipment(facility.facility_code)?.types.length,
-    )
     if (requiresEquipment && draftPhotos.some((photo) => !photo.equipmentType)) {
       toast.error("각 사진의 기구유형을 선택해 주세요.")
       return
@@ -178,6 +289,10 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
       return
     }
     clearDrafts()
+    setEditingMeta(false)
+    setMetaDrafts({})
+    clearEditAddedPhotos()
+    setPendingDeleteIds([])
     onChange({ ...facility, visited: false, photos: [], notes: [] })
     toast.success("완료 기록을 삭제했습니다")
   }
@@ -313,93 +428,32 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
       ) : null}
 
       {open ? (
-        <div className="space-y-4 border-t px-4 py-4">
-          <section className="space-y-1.5">
-            <InfoRow
-              label="시설번호"
-              value={facility.facility_code}
-              href={
-                facility.facility_code
-                  ? cpfFacilityUrl(facility.facility_code)
-                  : undefined
-              }
-            />
-            <InfoRow label="설치장소" value={facility.place_type} />
-            <InfoRow label="지역" value={facility.region} />
-            <InfoRow label="실내외" value={facility.indoor_outdoor} />
-            <InfoRow label="대표자" value={facility.representative} />
-            <InfoRow label="전화" value={facility.phone} />
-            <InfoRow label="이메일" value={facility.email} />
-            <InfoRow label="관리자" value={facility.safety_manager} />
-            <InfoRow
-              label="주소"
-              value={facility.address}
-              action={
-                facility.address ? (
-                  <button
-                    type="button"
-                    onClick={() => void copyAddress()}
-                    className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground active:scale-95"
-                    aria-label="주소 복사"
-                  >
-                    <Copy className="size-3.5" />
-                  </button>
-                ) : null
-              }
-            />
-          </section>
-          {hasCoords ? (
-            <a
-              href={kakaoRouteUrl(facility.name, facility.lat!, facility.lng!)}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-            >
-              <MapPinned className="size-3.5" />
-              카카오맵에서 보기
-            </a>
-          ) : null}
-          <section>
-            <h4 className="mb-2 text-sm font-medium">현장 사진 (최대 5장)</h4>
-            <PhotoUploader
-              photos={facility.visited ? savedAsDraft : draftPhotos}
-              onChange={facility.visited || busy ? undefined : setDraftPhotos}
-              readOnly={facility.visited || busy}
-              facilityCode={facility.facility_code}
-            />
-          </section>
-          <section>
-            <h4 className="mb-2 text-sm font-medium">점검내용</h4>
-            <MemoSection
-              notes={facility.notes}
-              draft={draftNote}
-              onDraftChange={setDraftNote}
-              readOnly={facility.visited}
-              disabled={busy}
-            />
-          </section>
-          {facility.visited ? (
-            <button
-              type="button"
-              onClick={() => void handleClearVisit()}
-              disabled={busy}
-              aria-busy={busyKind === "clear"}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 text-sm font-medium text-destructive active:scale-[0.99] disabled:opacity-50"
-            >
-              {busyKind === "clear" ? (
-                <>
-                  <Hourglass className="size-4 animate-hourglass" aria-hidden />
-                  삭제 중…
-                </>
-              ) : (
-                <>
-                  <Trash2 className="size-4" />
-                  완료 기록 삭제
-                </>
-              )}
-            </button>
-          ) : null}
-        </div>
+        <FacilityCardPanel
+          facility={facility}
+          hasCoords={hasCoords}
+          busy={busy}
+          busyKind={
+            busyKind === "clear" || busyKind === "saveMeta" ? busyKind : null
+          }
+          draftPhotos={draftPhotos}
+          setDraftPhotos={setDraftPhotos}
+          draftNote={draftNote}
+          setDraftNote={setDraftNote}
+          savedAsDraft={savedAsDraft}
+          editingMeta={editingMeta}
+          metaDrafts={metaDrafts}
+          editablePhotos={editablePhotos}
+          editAddedPhotos={editAddedPhotos}
+          setEditAddedPhotos={setEditAddedPhotos}
+          canEditPhotoMeta={canEditPhotoMeta}
+          onCopyAddress={() => void copyAddress()}
+          onStartMetaEdit={startMetaEdit}
+          onCancelMetaEdit={cancelMetaEdit}
+          onPatchMetaDraft={patchMetaDraft}
+          onDeleteSavedPhoto={markSavedPhotoDeleted}
+          onSaveMetaEdit={() => void saveMetaEdit()}
+          onClearVisit={() => void handleClearVisit()}
+        />
       ) : null}
     </article>
   )

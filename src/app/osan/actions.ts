@@ -83,6 +83,43 @@ export async function savePhoto(
   }
 }
 
+/** 기존 사진의 기구유형·점검내용만 갱신 (파일 재업로드 없음) */
+export async function updatePhotoMeta(
+  photoId: string,
+  meta: { equipmentType?: string | null; caption?: string | null },
+): Promise<ActionResult<OsanPhotoWithUrl>> {
+  try {
+    const client = requireClient()
+    const caption =
+      meta.caption == null ? null : meta.caption.trim() || null
+    const equipmentType =
+      meta.equipmentType == null ? null : meta.equipmentType.trim() || null
+
+    const { data, error } = await client
+      .from("facility_photos")
+      .update({
+        equipment_type: equipmentType,
+        caption,
+      })
+      .eq("id", photoId)
+      .select("*")
+      .single()
+
+    if (error || !data) {
+      return { ok: false, error: error?.message ?? "사진 정보 저장 실패" }
+    }
+    return {
+      ok: true,
+      data: {
+        ...(data as OsanPhotoWithUrl),
+        url: osanPublicUrl(data.storage_path),
+      },
+    }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "오류" }
+  }
+}
+
 export async function deletePhoto(
   photoId: string,
 ): Promise<ActionResult<{ id: string }>> {
