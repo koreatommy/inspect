@@ -1,10 +1,11 @@
 "use client"
 
-import { ChevronDown, Navigation } from "lucide-react"
+import { ChevronDown } from "lucide-react"
 
 import type { OsanFacilityWithRelations } from "@/lib/osan/types"
 import { cn } from "@/lib/utils"
-import { formatDistance, kakaoRouteUrl } from "./osan-utils"
+import { RouteNavLinks } from "./route-nav-links"
+import { formatDistance } from "./osan-utils"
 
 type Props = {
   open: boolean
@@ -42,7 +43,7 @@ export function RouteSheet({
           </p>
         </div>
         <ChevronDown
-          className={cn("size-5 transition-transform", open && "rotate-180")}
+          className={cn("size-5 transition-transform", !open && "rotate-180")}
         />
       </button>
       {open ? (
@@ -75,19 +76,11 @@ export function RouteSheet({
                     </span>
                   </button>
                   {hasCoords ? (
-                    <a
-                      href={kakaoRouteUrl(
-                        facility.name,
-                        facility.lat!,
-                        facility.lng!,
-                      )}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-background"
-                      aria-label="길찾기"
-                    >
-                      <Navigation className="size-4" />
-                    </a>
+                    <RouteNavLinks
+                      name={facility.name}
+                      lat={facility.lat!}
+                      lng={facility.lng!}
+                    />
                   ) : null}
                 </div>
               </li>

@@ -27,9 +27,33 @@ export function kakaoMapUrl(name: string, lat: number, lng: number): string {
   return `https://map.kakao.com/link/map/${encodeURIComponent(name)},${lat},${lng}`
 }
 
+/**
+ * 티맵 길찾기(도착지) 링크.
+ * NEXT_PUBLIC_TMAP_APP_KEY 가 있으면 공식 앱 실행 HTTPS를 쓰고,
+ * 없으면 모바일 앱 스킴(tmap://)으로 폴백한다.
+ */
+export function tmapRouteUrl(name: string, lat: number, lng: number): string {
+  const appKey = process.env.NEXT_PUBLIC_TMAP_APP_KEY?.trim()
+  if (appKey) {
+    const params = new URLSearchParams({
+      appKey,
+      name,
+      lon: String(lng),
+      lat: String(lat),
+    })
+    return `https://apis.openapi.sk.com/tmap/app/routes?${params.toString()}`
+  }
+  return `tmap://route?goalname=${encodeURIComponent(name)}&goalx=${lng}&goaly=${lat}`
+}
+
 export function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)}m`
   return `${(meters / 1000).toFixed(1)}km`
+}
+
+/** 주소 앞 5자리 우편번호만 제거한다. */
+export function addressWithoutPostal(address: string): string {
+  return address.replace(/^\d{5}\s*/, "").trim()
 }
 
 /** 업로드 전 이미지 리사이즈/압축 (최대 변 1600px, JPEG 0.8) */

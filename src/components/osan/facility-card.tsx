@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { Check, Copy, MapPinned, Navigation, Phone, Trash2 } from "lucide-react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
+import { Check, Copy, MapPinned, Phone, Trash2 } from "lucide-react"
 import { toast } from "./toast"
 
 import { clearVisitRecord, toggleVisited } from "@/app/osan/actions"
@@ -14,7 +14,12 @@ import type { DraftPhoto } from "./draft-photo"
 import { MemoSection } from "./memo-section"
 import { persistInspection } from "./persist-inspection"
 import { PhotoUploader, revokeDraftPhoto } from "./photo-uploader"
-import { kakaoRouteUrl, placeTypeColor } from "./osan-utils"
+import { RouteNavLinks } from "./route-nav-links"
+import {
+  addressWithoutPostal,
+  kakaoRouteUrl,
+  placeTypeColor,
+} from "./osan-utils"
 
 type Props = {
   facility: OsanFacilityWithRelations
@@ -23,12 +28,21 @@ type Props = {
   onChange: (next: OsanFacilityWithRelations) => void
 }
 
-function InfoRow({ label, value }: { label: string; value: string | null }) {
+function InfoRow({
+  label,
+  value,
+  action,
+}: {
+  label: string
+  value: string | null
+  action?: ReactNode
+}) {
   if (!value) return null
   return (
     <div className="flex gap-2 text-sm">
       <span className="w-16 shrink-0 text-muted-foreground">{label}</span>
       <span className="min-w-0 flex-1 break-words">{value}</span>
+      {action}
     </div>
   )
 }
@@ -129,7 +143,9 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
   async function copyAddress() {
     if (!facility.address) return
     try {
-      await navigator.clipboard.writeText(facility.address)
+      await navigator.clipboard.writeText(
+        addressWithoutPostal(facility.address),
+      )
       toast.success("주소 복사됨")
     } catch {
       toast.error("복사에 실패했습니다")
@@ -197,15 +213,12 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
           </a>
         ) : null}
         {hasCoords ? (
-          <a
-            href={kakaoRouteUrl(facility.name, facility.lat!, facility.lng!)}
-            target="_blank"
-            rel="noreferrer"
-            className="flex h-10 flex-1 items-center justify-center gap-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground"
-          >
-            <Navigation className="size-4" />
-            길찾기
-          </a>
+          <RouteNavLinks
+            name={facility.name}
+            lat={facility.lat!}
+            lng={facility.lng!}
+            variant="text"
+          />
         ) : (
           <button
             type="button"
@@ -243,7 +256,22 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
             <InfoRow label="전화" value={facility.phone} />
             <InfoRow label="이메일" value={facility.email} />
             <InfoRow label="관리자" value={facility.safety_manager} />
-            <InfoRow label="주소" value={facility.address} />
+            <InfoRow
+              label="주소"
+              value={facility.address}
+              action={
+                facility.address ? (
+                  <button
+                    type="button"
+                    onClick={() => void copyAddress()}
+                    className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground active:scale-95"
+                    aria-label="주소 복사"
+                  >
+                    <Copy className="size-3.5" />
+                  </button>
+                ) : null
+              }
+            />
           </section>
           {hasCoords ? (
             <a
