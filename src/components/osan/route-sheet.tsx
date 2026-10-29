@@ -24,11 +24,16 @@ export function RouteSheet({
   onSelect,
 }: Props) {
   return (
-    <section className="rounded-t-2xl border bg-background shadow-lg">
+    <section
+      className={cn(
+        "pointer-events-none absolute inset-x-0 bottom-0 z-10 flex max-h-[min(48vh,100%)] flex-col",
+        "rounded-t-2xl border bg-background/95 shadow-lg backdrop-blur",
+      )}
+    >
       <button
         type="button"
         onClick={() => onOpenChange(!open)}
-        className="flex w-full items-center justify-between px-4 py-3"
+        className="pointer-events-auto flex w-full shrink-0 items-center justify-between px-4 py-3"
       >
         <div>
           <p className="text-sm font-semibold">방문 동선 {ordered.length}곳</p>
@@ -41,7 +46,7 @@ export function RouteSheet({
         />
       </button>
       {open ? (
-        <ol className="max-h-[38vh] space-y-1 overflow-y-auto px-3 pb-3">
+        <ol className="pointer-events-auto min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-3">
           {ordered.map((facility, index) => {
             const hasCoords = facility.lat != null && facility.lng != null
             return (

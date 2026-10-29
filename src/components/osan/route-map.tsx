@@ -14,7 +14,12 @@ type Props = {
   onSelect: (id: string) => void
   onLocate: () => void
   locating: boolean
+  /** 하단 동선 시트가 펼쳐졌는지 — setBounds 하단 패딩·relayout에 사용 */
+  sheetOpen?: boolean
 }
+
+/** 접힌 시트(헤더)에 마커가 가려지지 않도록 */
+const SHEET_PEEK_PAD = 72
 
 const OSAN_CENTER = { lat: 37.1498, lng: 127.0772 }
 
@@ -84,12 +89,15 @@ export function RouteMap({
   onSelect,
   onLocate,
   locating,
+  sheetOpen = false,
 }: Props) {
   const { loaded, error } = useKakaoLoader()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
   const overlaysRef = useRef<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
   const lineRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const sheetOpenRef = useRef(sheetOpen)
+  sheetOpenRef.current = sheetOpen
 
   const routed = useMemo(() => {
     const points = facilities
@@ -103,6 +111,11 @@ export function RouteMap({
     routed.order.forEach((p, i) => map.set(p.id, i + 1))
     return map
   }, [routed])
+
+  const bottomPad = () =>
+    sheetOpenRef.current
+      ? Math.round(window.innerHeight * 0.48)
+      : SHEET_PEEK_PAD
 
   useEffect(() => {
     if (!loaded || !containerRef.current || !window.kakao?.maps) return
@@ -172,9 +185,20 @@ export function RouteMap({
     }
 
     if (!bounds.isEmpty()) {
-      map.setBounds(bounds, 72, 48, 48, 48)
+      // top, right, bottom, left — 하단 시트에 마커가 가리지 않게
+      map.setBounds(bounds, 48, 48, bottomPad(), 48)
     }
   }, [facilities, loaded, onSelect, orderIndex, routed.order, selectedId, start])
+
+  useEffect(() => {
+    if (!loaded || !containerRef.current || !mapRef.current) return
+    const el = containerRef.current
+    const ro = new ResizeObserver(() => {
+      mapRef.current?.relayout()
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [loaded])
 
   // 선택 변경 시에만 이동. facilities 갱신마다 panTo 하면 setBounds로 맞춘 2개 마커 뷰가 깨진다.
   const selectedIdRef = useRef(selectedId)
@@ -206,13 +230,13 @@ export function RouteMap({
   }
 
   return (
-    <div className="relative h-full">
+    <div className="relative size-full">
       <div ref={containerRef} className="size-full" />
       <button
         type="button"
         onClick={onLocate}
         disabled={locating}
-        className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-full bg-background shadow-md"
+        className="absolute top-3 right-3 z-[5] flex size-11 items-center justify-center rounded-full bg-background shadow-md"
         aria-label="내 위치로 최적화"
       >
         <LocateFixed className={locating ? "size-5 animate-pulse" : "size-5"} />

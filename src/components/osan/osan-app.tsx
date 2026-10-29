@@ -61,7 +61,7 @@ export function OsanApp({ initialFacilities }: Props) {
   const [visited, setVisited] = useState<VisitedFilter>("pending")
   const [query, setQuery] = useState("")
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [sheetOpen, setSheetOpen] = useState(true)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [start, setStart] = useState<LatLng | undefined>(undefined)
   const [locating, setLocating] = useState(false)
   const { loaded } = useKakaoLoader()
@@ -189,17 +189,16 @@ export function OsanApp({ initialFacilities }: Props) {
 
       <div className="relative min-h-0 flex-1">
         {tab === "map" ? (
-          <div className="absolute inset-0 flex flex-col">
-            <div className="min-h-0 flex-1">
-              <RouteMap
-                facilities={filtered}
-                start={start}
-                selectedId={selectedId}
-                onSelect={selectFromMap}
-                onLocate={locate}
-                locating={locating}
-              />
-            </div>
+          <div className="absolute inset-0">
+            <RouteMap
+              facilities={filtered}
+              start={start}
+              selectedId={selectedId}
+              onSelect={selectFromMap}
+              onLocate={locate}
+              locating={locating}
+              sheetOpen={sheetOpen}
+            />
             <RouteSheet
               open={sheetOpen}
               onOpenChange={setSheetOpen}
