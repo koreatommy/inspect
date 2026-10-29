@@ -247,6 +247,50 @@ export async function toggleVisited(
   }
 }
 
+export type FacilityContactField = "phone" | "email" | "safety_manager"
+
+const FACILITY_CONTACT_FIELDS = new Set<FacilityContactField>([
+  "phone",
+  "email",
+  "safety_manager",
+])
+
+/** 시설 전화·이메일·관리자만 갱신 */
+export async function updateFacilityContact(
+  facilityId: string,
+  field: FacilityContactField,
+  value: string,
+): Promise<ActionResult<{ id: string; field: FacilityContactField; value: string | null }>> {
+  try {
+    if (!FACILITY_CONTACT_FIELDS.has(field)) {
+      return { ok: false, error: "수정할 수 없는 항목입니다." }
+    }
+    const trimmed = value.trim()
+    if (field === "email" && trimmed && !trimmed.includes("@")) {
+      return { ok: false, error: "이메일 형식이 올바르지 않습니다." }
+    }
+    const next = trimmed || null
+    const patch =
+      field === "phone"
+        ? { phone: next }
+        : field === "email"
+          ? { email: next }
+          : { safety_manager: next }
+    const client = requireClient()
+    const { data, error } = await client
+      .from("facilities")
+      .update(patch)
+      .eq("id", facilityId)
+      .select("id")
+      .maybeSingle()
+    if (error) return { ok: false, error: error.message }
+    if (!data) return { ok: false, error: "시설을 찾을 수 없습니다." }
+    return { ok: true, data: { id: facilityId, field, value: next } }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "오류" }
+  }
+}
+
 /** 점검완료·사진·점검내용을 모두 지우고 미완료 상태로 되돌린다. 시설 마스터는 유지. */
 export async function clearVisitRecord(
   facilityId: string,

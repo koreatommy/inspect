@@ -1,7 +1,12 @@
 "use client"
 
-import type { ChangeEvent, ReactNode } from "react"
-import { Camera, ImageIcon } from "lucide-react"
+import {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from "react"
+import { Camera, ImageIcon, X } from "lucide-react"
 
 import type { FacilityEquipment } from "@/lib/osan/facility-equipment"
 import { cn } from "@/lib/utils"
@@ -23,7 +28,8 @@ type Props = {
   onSelectType: (type: string) => void
   caption: string
   onCaptionChange: (value: string) => void
-  onFileChange: (e: ChangeEvent<HTMLInputElement>) => void
+  onSave: (file: File) => void | Promise<void>
+  saving?: boolean
 }
 
 export function PhotoPickerSheet({
@@ -34,14 +40,64 @@ export function PhotoPickerSheet({
   onSelectType,
   caption,
   onCaptionChange,
-  onFileChange,
+  onSave,
+  saving = false,
 }: Props) {
   const types = equipment?.types ?? []
   const requiresType = types.length > 0
   const canCapture = !requiresType || Boolean(selectedType)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open) return
+    setPendingFile(null)
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+  }, [open])
+
+  function clearPending() {
+    setPendingFile(null)
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+  }
+
+  function onFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file) return
+    setPendingFile(file)
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return URL.createObjectURL(file)
+    })
+  }
+
+  async function handleSave() {
+    if (saving) return
+    if (!pendingFile) {
+      toast.error("촬영하거나 앨범에서 사진을 선택해 주세요.")
+      return
+    }
+    if (requiresType && !selectedType) {
+      toast.error("유형을 먼저 선택해 주세요.")
+      return
+    }
+    await onSave(pendingFile)
+  }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (saving) return
+        onOpenChange(next)
+      }}
+    >
       <SheetContent
         side="bottom"
         showCloseButton={false}
@@ -64,6 +120,7 @@ export function PhotoPickerSheet({
             showSectionHeaders
             totalCount={equipment?.totalCount}
             emptyMessage="이 시설에 등록된 기구유형이 없습니다."
+            disabled={saving}
           />
         </section>
 
@@ -72,13 +129,19 @@ export function PhotoPickerSheet({
             label="촬영"
             icon={<Camera className="size-6 text-muted-foreground" />}
             capture="environment"
-            disabled={!canCapture}
+            disabled={!canCapture || saving}
+            disabledReason={
+              !canCapture ? "유형을 먼저 선택해 주세요." : undefined
+            }
             onFileChange={onFileChange}
           />
           <CaptureOption
             label="앨범"
             icon={<ImageIcon className="size-6 text-muted-foreground" />}
-            disabled={!canCapture}
+            disabled={!canCapture || saving}
+            disabledReason={
+              !canCapture ? "유형을 먼저 선택해 주세요." : undefined
+            }
             onFileChange={onFileChange}
           />
         </div>
@@ -92,12 +155,49 @@ export function PhotoPickerSheet({
           <h3 className="text-sm font-medium">사진 점검내용</h3>
           <textarea
             value={caption}
+            disabled={saving}
             onChange={(e) => onCaptionChange(e.target.value)}
             placeholder="이 사진에 대한 점검내용을 입력해 주세요 (선택)"
             rows={3}
-            className="min-h-16 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="min-h-16 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
           />
         </section>
+
+        {previewUrl ? (
+          <section className="space-y-2 px-4 pt-4">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-medium">선택한 사진</h3>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={clearPending}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground disabled:opacity-50"
+              >
+                <X className="size-3.5" />
+                다시 선택
+              </button>
+            </div>
+            <div className="overflow-hidden rounded-xl border bg-muted/20">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewUrl}
+                alt="선택한 사진 미리보기"
+                className="mx-auto max-h-56 w-full object-contain"
+              />
+            </div>
+          </section>
+        ) : null}
+
+        <div className="px-4 pt-4">
+          <button
+            type="button"
+            disabled={saving || !pendingFile}
+            onClick={() => void handleSave()}
+            className="flex h-11 w-full items-center justify-center rounded-xl bg-foreground text-sm font-medium text-background disabled:opacity-50"
+          >
+            {saving ? "저장 중…" : "저장"}
+          </button>
+        </div>
       </SheetContent>
     </Sheet>
   )
@@ -108,12 +208,14 @@ function CaptureOption({
   icon,
   capture,
   disabled,
+  disabledReason,
   onFileChange,
 }: {
   label: string
   icon: ReactNode
   capture?: "environment"
   disabled: boolean
+  disabledReason?: string
   onFileChange: (e: ChangeEvent<HTMLInputElement>) => void
 }) {
   return (
@@ -126,7 +228,7 @@ function CaptureOption({
         disabled
           ? (e) => {
               e.preventDefault()
-              toast.error("유형을 먼저 선택해 주세요.")
+              if (disabledReason) toast.error(disabledReason)
             }
           : undefined
       }

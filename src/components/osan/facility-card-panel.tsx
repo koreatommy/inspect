@@ -1,13 +1,16 @@
 "use client"
 
 import type { Dispatch, ReactNode, SetStateAction } from "react"
-import { Copy, Hourglass, MapPinned, Pencil, Trash2 } from "lucide-react"
+import { Check, Copy, Hourglass, MapPinned, Pencil, Trash2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
+import type { FacilityContactField } from "@/app/osan/actions"
 import type {
   OsanFacilityWithRelations,
   OsanPhotoWithUrl,
 } from "@/lib/osan/types"
 import type { DraftPhoto } from "./draft-photo"
+import { FacilityContactSection } from "./facility-contact-section"
 import { MemoSection } from "./memo-section"
 import {
   PhotoMetaEditor,
@@ -20,7 +23,7 @@ type Props = {
   facility: OsanFacilityWithRelations
   hasCoords: boolean
   busy: boolean
-  busyKind: "clear" | "saveMeta" | null
+  busyKind: "clear" | "saveMeta" | "complete" | "undo" | null
   draftPhotos: DraftPhoto[]
   setDraftPhotos: Dispatch<SetStateAction<DraftPhoto[]>>
   draftNote: string
@@ -42,7 +45,9 @@ type Props = {
   onPatchMetaDraft: (photoId: string, next: PhotoMetaDraft) => void
   onDeleteSavedPhoto: (photoId: string) => void
   onSaveMetaEdit: () => void
+  onVisitedClick: () => void
   onClearVisit: () => void
+  onContactSaved: (field: FacilityContactField, value: string | null) => void
 }
 
 function InfoRow({
@@ -103,7 +108,9 @@ export function FacilityCardPanel({
   onPatchMetaDraft,
   onDeleteSavedPhoto,
   onSaveMetaEdit,
+  onVisitedClick,
   onClearVisit,
+  onContactSaved,
 }: Props) {
   return (
     <div className="space-y-4 border-t px-4 py-4">
@@ -121,9 +128,16 @@ export function FacilityCardPanel({
         <InfoRow label="지역" value={facility.region} />
         <InfoRow label="실내외" value={facility.indoor_outdoor} />
         <InfoRow label="대표자" value={facility.representative} />
-        <InfoRow label="전화" value={facility.phone} />
-        <InfoRow label="이메일" value={facility.email} />
-        <InfoRow label="관리자" value={facility.safety_manager} />
+        <FacilityContactSection
+          facilityId={facility.id}
+          values={{
+            phone: facility.phone,
+            email: facility.email,
+            safety_manager: facility.safety_manager,
+          }}
+          disabled={busy}
+          onSaved={onContactSaved}
+        />
         <InfoRow
           label="주소"
           value={facility.address}
@@ -226,7 +240,34 @@ export function FacilityCardPanel({
             )}
           </button>
         </div>
-      ) : null}
+      ) : (
+        <button
+          type="button"
+          onClick={onVisitedClick}
+          disabled={busy}
+          aria-busy={busyKind === "complete" || busyKind === "undo"}
+          className={cn(
+            "flex h-11 w-full items-center justify-center gap-1 rounded-xl text-sm font-medium disabled:opacity-80",
+            busyKind === "complete" || busyKind === "undo"
+              ? "bg-amber-600 text-white"
+              : facility.visited
+                ? "bg-emerald-600 text-white"
+                : "bg-foreground text-background",
+          )}
+        >
+          {busyKind === "complete" || busyKind === "undo" ? (
+            <>
+              <Hourglass className="size-4 animate-hourglass" aria-hidden />
+              {busyKind === "complete" ? "저장 중…" : "변경 중…"}
+            </>
+          ) : (
+            <>
+              <Check className="size-4" />
+              {facility.visited ? "완료됨" : "점검기록"}
+            </>
+          )}
+        </button>
+      )}
       {facility.visited && !editingMeta ? (
         <button
           type="button"

@@ -3,7 +3,6 @@
 import {
   useRef,
   useState,
-  type ChangeEvent,
   type Dispatch,
   type SetStateAction,
 } from "react"
@@ -88,7 +87,7 @@ export function PhotoMetaEditor({
     setPickerOpen(true)
   }
 
-  async function handleFile(file: File) {
+  async function handleSave(file: File) {
     const slot = pendingSlotRef.current
     const equipmentType = selectedTypeRef.current ?? undefined
     const photoCaption = captionRef.current.trim() || undefined
@@ -104,18 +103,14 @@ export function PhotoMetaEditor({
           { slot, previewUrl, blob, equipmentType, caption: photoCaption },
         ].sort((a, b) => a.slot - b.slot)
       })
+      setPickerOpen(false)
+      setSelectedType(null)
+      setCaption("")
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "사진 준비 실패")
     } finally {
       setBusySlot(null)
     }
-  }
-
-  function onFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    setPickerOpen(false)
-    if (file) void handleFile(file)
-    e.target.value = ""
   }
 
   function patchAddedPhoto(slot: number, patch: Partial<DraftPhoto>) {
@@ -145,7 +140,8 @@ export function PhotoMetaEditor({
         onSelectType={setSelectedType}
         caption={caption}
         onCaptionChange={setCaption}
-        onFileChange={onFileChange}
+        onSave={handleSave}
+        saving={busySlot != null}
       />
 
       {equipment ? (

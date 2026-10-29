@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Check, Copy, Hourglass, Phone } from "lucide-react"
+import { Copy, Hourglass, Phone } from "lucide-react"
 import { toast } from "./toast"
 
 import {
@@ -12,6 +12,7 @@ import {
   toggleVisited,
   updateNote,
   updatePhotoMeta,
+  type FacilityContactField,
 } from "@/app/osan/actions"
 import { getFacilityEquipment } from "@/lib/osan/facility-equipment"
 import type {
@@ -159,6 +160,13 @@ export function FacilityCard({
 
   function patchNoteDraft(noteId: string, value: string) {
     setNoteDrafts((prev) => ({ ...prev, [noteId]: value }))
+  }
+
+  function handleContactSaved(
+    field: FacilityContactField,
+    value: string | null,
+  ) {
+    onChange({ ...facility, [field]: value })
   }
 
   function markSavedPhotoDeleted(photoId: string) {
@@ -434,7 +442,7 @@ export function FacilityCard({
         </div>
       </button>
 
-      <div className="space-y-2 px-4 pb-3">
+      <div className="px-4 pb-3">
         <div className="flex gap-2">
           {facility.phone ? (
             <a
@@ -464,32 +472,6 @@ export function FacilityCard({
             </button>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => void handleVisitedClick()}
-          disabled={busy}
-          aria-busy={busy}
-          className={cn(
-            "flex h-11 w-full items-center justify-center gap-1 rounded-xl text-sm font-medium disabled:opacity-80",
-            busyKind === "complete" || busyKind === "undo"
-              ? "bg-amber-600 text-white"
-              : facility.visited
-                ? "bg-emerald-600 text-white"
-                : "bg-foreground text-background",
-          )}
-        >
-          {busyKind === "complete" || busyKind === "undo" ? (
-            <>
-              <Hourglass className="size-4 animate-hourglass" aria-hidden />
-              {busyCopy?.button}
-            </>
-          ) : (
-            <>
-              <Check className="size-4" />
-              {facility.visited ? "완료됨" : "점검완료"}
-            </>
-          )}
-        </button>
       </div>
 
       {busyCopy ? (
@@ -508,9 +490,7 @@ export function FacilityCard({
           facility={facility}
           hasCoords={hasCoords}
           busy={busy}
-          busyKind={
-            busyKind === "clear" || busyKind === "saveMeta" ? busyKind : null
-          }
+          busyKind={busyKind}
           draftPhotos={draftPhotos}
           setDraftPhotos={setDraftPhotos}
           draftNote={draftNote}
@@ -532,7 +512,9 @@ export function FacilityCard({
           onPatchMetaDraft={patchMetaDraft}
           onDeleteSavedPhoto={markSavedPhotoDeleted}
           onSaveMetaEdit={() => void saveMetaEdit()}
+          onVisitedClick={() => void handleVisitedClick()}
           onClearVisit={() => void handleClearVisit()}
+          onContactSaved={handleContactSaved}
         />
       ) : null}
     </article>

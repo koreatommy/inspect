@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from "react"
+import { useRef, useState, type Dispatch, type SetStateAction } from "react"
 import { Camera, Loader2, Trash2 } from "lucide-react"
 import { toast } from "./toast"
 
@@ -49,7 +49,7 @@ export function PhotoUploader({
     setPickerOpen(true)
   }
 
-  async function handleFile(file: File) {
+  async function handleSave(file: File) {
     if (!onChange) return
     const slot = pendingSlotRef.current
     const equipmentType = selectedTypeRef.current ?? undefined
@@ -66,6 +66,9 @@ export function PhotoUploader({
           { slot, previewUrl, blob, equipmentType, caption: photoCaption },
         ].sort((a, b) => a.slot - b.slot)
       })
+      setPickerOpen(false)
+      setSelectedType(null)
+      setCaption("")
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "사진 준비 실패")
     } finally {
@@ -82,13 +85,6 @@ export function PhotoUploader({
     })
   }
 
-  function onFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    setPickerOpen(false)
-    if (file) void handleFile(file)
-    e.target.value = ""
-  }
-
   return (
     <div>
       {readOnly ? null : (
@@ -100,7 +96,8 @@ export function PhotoUploader({
           onSelectType={setSelectedType}
           caption={caption}
           onCaptionChange={setCaption}
-          onFileChange={onFileChange}
+          onSave={handleSave}
+          saving={picking}
         />
       )}
 
