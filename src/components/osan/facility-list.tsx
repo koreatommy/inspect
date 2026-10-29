@@ -68,7 +68,7 @@ export function FacilityList({
           <FacilityCard
             facility={facility}
             order={orderById.get(facility.id)}
-            defaultOpen={selectedId === facility.id}
+            selected={selectedId === facility.id}
             onChange={onChange}
             distanceLabel={distanceById?.get(facility.id)}
           />

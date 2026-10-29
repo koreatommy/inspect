@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { List, MapPinned } from "lucide-react"
 
+import { useMediaQuery } from "@/hooks/use-media-query"
 import { fallbackCoord } from "@/lib/osan/dong-centroids"
 import type { OsanFacilityWithRelations } from "@/lib/osan/types"
 import { PLACE_TYPES } from "@/lib/osan/types"
@@ -64,11 +65,18 @@ function matchesVisited(facility: OsanFacilityWithRelations, visited: VisitedFil
 }
 
 function scrollToFacilityCard(id: string) {
-  requestAnimationFrame(() => {
-    document
-      .getElementById(`osan-card-${id}`)
-      ?.scrollIntoView({ behavior: "smooth", block: "start" })
-  })
+  const tryScroll = (attempt = 0) => {
+    const el = document.getElementById(`osan-card-${id}`)
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" })
+      return
+    }
+    // 모바일 탭 전환 직후 목록이 아직 마운트되지 않은 경우를 대비한다.
+    if (attempt < 12) {
+      requestAnimationFrame(() => tryScroll(attempt + 1))
+    }
+  }
+  requestAnimationFrame(() => tryScroll())
 }
 
 export function OsanApp({ initialFacilities }: Props) {
@@ -82,6 +90,10 @@ export function OsanApp({ initialFacilities }: Props) {
   const [start, setStart] = useState<LatLng | undefined>(undefined)
   const [locating, setLocating] = useState(false)
   const { loaded } = useKakaoLoader()
+  /** lg 이상: 지도·목록 동시 표시. 모바일은 탭 전환(마운트) 유지 */
+  const isDesktop = useMediaQuery("(min-width: 1024px)")
+  const showMap = isDesktop || tab === "map"
+  const showList = isDesktop || tab === "list"
 
   useKakaoGeocode({
     loaded,
@@ -146,7 +158,7 @@ export function OsanApp({ initialFacilities }: Props) {
   const routed = useMemo(() => {
     const points = filtered
       .filter((f) => f.lat != null && f.lng != null)
-      .map((f) => ({ id: f.id, lat: f.lat!, lng: f.lng! }))
+      .map((f) => ({ id: f.id, lat: f.lat!, lng: f.lng!, name: f.name }))
     return optimizeRoute(points, start)
   }, [filtered, start])
 
@@ -239,7 +251,7 @@ export function OsanApp({ initialFacilities }: Props) {
 
         const points = filtered
           .filter((f) => f.lat != null && f.lng != null)
-          .map((f) => ({ id: f.id, lat: f.lat!, lng: f.lng! }))
+          .map((f) => ({ id: f.id, lat: f.lat!, lng: f.lng!, name: f.name }))
         const nextRoute = optimizeRoute(points, nextStart)
         const firstId = nextRoute.order[0]?.id
         if (firstId) {
@@ -263,13 +275,16 @@ export function OsanApp({ initialFacilities }: Props) {
   function selectFromMap(id: string) {
     setSelectedId(id)
     setSheetOpen(false)
+    // 모바일은 목록 탭으로 전환해 선택 카드를 보이게 한다.
+    if (!isDesktop) setTab("list")
+    scrollToFacilityCard(id)
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col">
-      <header className="sticky top-0 z-20 border-b bg-background/95 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur">
-        <div className="space-y-2">
-          <div>
+    <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col lg:mx-0 lg:h-dvh lg:max-w-none">
+      <header className="sticky top-0 z-20 border-b bg-background/95 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur lg:static lg:shrink-0 lg:px-6">
+        <div className="space-y-2 lg:flex lg:items-end lg:justify-between lg:gap-8 lg:space-y-0">
+          <div className="min-w-0 lg:max-w-md">
             <p className="text-xs text-muted-foreground">오산시 지도점검</p>
             <div className="flex items-baseline justify-between gap-3">
               <h1 className="text-lg font-semibold">현장 방문</h1>
@@ -281,7 +296,7 @@ export function OsanApp({ initialFacilities }: Props) {
               </time>
             </div>
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 lg:min-w-[14rem] lg:max-w-xs lg:flex-1">
             <div
               className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
               role="progressbar"
@@ -305,7 +320,7 @@ export function OsanApp({ initialFacilities }: Props) {
             </p>
           </div>
         </div>
-        <div className="mt-3">
+        <div className="mt-3 lg:mt-4">
           <FacilityFilters
             placeType={placeType}
             onPlaceType={setPlaceType}
@@ -320,12 +335,18 @@ export function OsanApp({ initialFacilities }: Props) {
         </div>
       </header>
 
-      <div className="relative min-h-0 flex-1">
-        {tab === "map" ? (
-          <div className="absolute inset-0">
+      {/*
+        모바일: 하단 탭으로 지도/목록 전환 (기존 UX 유지)
+        lg+: 왼쪽 목록 + 오른쪽 지도 동시 표시
+      */}
+      <div className="relative min-h-0 flex-1 lg:grid lg:grid-cols-[minmax(22rem,28rem)_minmax(0,1fr)] lg:overflow-hidden">
+        {showMap ? (
+          <div className="absolute inset-0 lg:relative lg:order-2 lg:min-h-0">
             <RouteMap
               facilities={filtered}
               start={start}
+              orderById={orderById}
+              routeOrder={routed.order}
               selectedId={selectedId}
               onSelect={selectFromMap}
               onLocate={locate}
@@ -351,8 +372,15 @@ export function OsanApp({ initialFacilities }: Props) {
               onSelect={goToFacilityList}
             />
           </div>
-        ) : (
-          <div className="h-full overflow-y-auto px-3 pt-3 pb-24">
+        ) : null}
+
+        {showList ? (
+          <div
+            className={cn(
+              "h-full overflow-y-auto px-3 pt-3 pb-24",
+              "lg:order-1 lg:border-r lg:bg-background lg:px-4 lg:pb-4",
+            )}
+          >
             <FacilityList
               facilities={orderedFacilities}
               orderById={orderById}
@@ -362,10 +390,10 @@ export function OsanApp({ initialFacilities }: Props) {
               hasStart={Boolean(start)}
             />
           </div>
-        )}
+        ) : null}
       </div>
 
-      <nav className="sticky bottom-0 z-20 grid grid-cols-2 border-t bg-background pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+      <nav className="sticky bottom-0 z-20 grid grid-cols-2 border-t bg-background pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden">
         {(
           [
             { id: "map", label: "동선", icon: MapPinned },

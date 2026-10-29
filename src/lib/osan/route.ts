@@ -1,9 +1,13 @@
-/** 방문 동선 최적화: Haversine 거리 기반 nearest-neighbor + 2-opt (클라이언트/서버 공용 순수 함수) */
+/** 방문 동선 최적화: 시설명 단지 묶음 + Haversine nearest-neighbor (클라이언트/서버 공용) */
+
+import { complexKeyFromName } from "@/lib/osan/complex-key"
 
 export type RoutePoint = {
   id: string
   lat: number
   lng: number
+  /** 단지 키 추출용 시설명 */
+  name: string
 }
 
 export type LatLng = { lat: number; lng: number }
@@ -54,8 +58,9 @@ function routeLength(points: RoutePoint[], start: LatLng): number {
   return total
 }
 
-/** 2-opt 지역 최적화 (경로가 작으므로 전수 반복) */
+/** 단지 내부 전용 2-opt (단지 경계를 넘지 않음) */
 function twoOpt(points: RoutePoint[], start: LatLng): RoutePoint[] {
+  if (points.length <= 2) return [...points]
   let best = [...points]
   let improved = true
   while (improved) {
@@ -77,14 +82,33 @@ function twoOpt(points: RoutePoint[], start: LatLng): RoutePoint[] {
   return best
 }
 
+function minDistToGroup(from: LatLng, members: RoutePoint[]): number {
+  let best = Infinity
+  for (const m of members) {
+    const d = haversine(from, m)
+    if (d < best) best = d
+  }
+  return best
+}
+
+function centroidOf(points: LatLng[]): LatLng {
+  return points.reduce(
+    (acc, p, _i, arr) => ({
+      lat: acc.lat + p.lat / arr.length,
+      lng: acc.lng + p.lng / arr.length,
+    }),
+    { lat: 0, lng: 0 },
+  )
+}
+
 export type OptimizedRoute = {
   order: RoutePoint[]
   totalMeters: number
 }
 
 /**
- * 좌표가 있는 지점들에 대해 방문 순서를 최적화한다.
- * start가 없으면 지점들의 중심(centroid)에서 가장 가까운 지점을 시작점으로 사용.
+ * 시설명 단지 키로 묶은 뒤, 단지 내부를 모두 방문하고 가장 가까운 다음 단지로 이동한다.
+ * start가 없으면 지점들의 중심(centroid)을 출발 기준으로 사용.
  */
 export function optimizeRoute(
   points: RoutePoint[],
@@ -94,17 +118,40 @@ export function optimizeRoute(
     return { order: [...points], totalMeters: 0 }
   }
 
-  const origin: LatLng =
-    start ??
-    points.reduce(
-      (acc, p, _i, arr) => ({
-        lat: acc.lat + p.lat / arr.length,
-        lng: acc.lng + p.lng / arr.length,
-      }),
-      { lat: 0, lng: 0 },
-    )
+  const origin: LatLng = start ?? centroidOf(points)
 
-  const nnOrder = nearestNeighbor(points, origin)
-  const optimized = twoOpt(nnOrder, origin)
-  return { order: optimized, totalMeters: routeLength(optimized, origin) }
+  const groups = new Map<string, RoutePoint[]>()
+  for (const point of points) {
+    const key = complexKeyFromName(point.name) || point.id
+    const list = groups.get(key)
+    if (list) list.push(point)
+    else groups.set(key, [point])
+  }
+
+  const remaining = new Map(groups)
+  const ordered: RoutePoint[] = []
+  let current: LatLng = origin
+
+  while (remaining.size > 0) {
+    let bestKey: string | null = null
+    let bestDist = Infinity
+    for (const [key, members] of remaining) {
+      const d = minDistToGroup(current, members)
+      if (d < bestDist) {
+        bestDist = d
+        bestKey = key
+      }
+    }
+    if (bestKey == null) break
+
+    const members = remaining.get(bestKey)!
+    remaining.delete(bestKey)
+
+    const withinNn = nearestNeighbor(members, current)
+    const within = twoOpt(withinNn, current)
+    ordered.push(...within)
+    current = within[within.length - 1]!
+  }
+
+  return { order: ordered, totalMeters: routeLength(ordered, origin) }
 }

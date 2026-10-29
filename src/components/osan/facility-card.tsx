@@ -60,7 +60,8 @@ function noteDraftsFromNotes(notes: OsanNote[]): Record<string, string> {
 type Props = {
   facility: OsanFacilityWithRelations
   order?: number
-  defaultOpen?: boolean
+  /** 맵/목록에서 선택된 시설 — true가 되면 카드를 펼치고 강조한다 */
+  selected?: boolean
   onChange: (next: OsanFacilityWithRelations) => void
   /** 현재 위치 기준 직선 거리 라벨 (예: 240m) */
   distanceLabel?: string | null
@@ -78,11 +79,11 @@ function mergePhotosBySlot(
 export function FacilityCard({
   facility,
   order,
-  defaultOpen,
+  selected = false,
   onChange,
   distanceLabel,
 }: Props) {
-  const [open, setOpen] = useState(Boolean(defaultOpen))
+  const [open, setOpen] = useState(selected)
   const [busyKind, setBusyKind] = useState<BusyKind | null>(null)
   const [draftPhotos, setDraftPhotos] = useState<DraftPhoto[]>([])
   const [draftNote, setDraftNote] = useState("")
@@ -108,6 +109,10 @@ export function FacilityCard({
   const editablePhotos = facility.photos.filter(
     (photo) => !pendingDeleteIds.includes(photo.id),
   )
+
+  useEffect(() => {
+    if (selected) setOpen(true)
+  }, [selected])
 
   useEffect(() => {
     return () => {
@@ -386,6 +391,7 @@ export function FacilityCard({
       className={cn(
         "rounded-2xl border bg-card text-card-foreground shadow-sm",
         facility.visited && "border-emerald-400/50",
+        selected && "border-primary ring-2 ring-primary/20",
       )}
     >
       <button

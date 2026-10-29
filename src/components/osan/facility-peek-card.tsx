@@ -23,7 +23,7 @@ export function FacilityPeekCard({
   const hasCoords = facility.lat != null && facility.lng != null
 
   return (
-    <div className="pointer-events-auto absolute inset-x-3 bottom-[4.5rem] z-[12] rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur">
+    <div className="pointer-events-auto absolute inset-x-3 bottom-[4.5rem] z-[12] rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur lg:inset-x-auto lg:right-3 lg:bottom-20 lg:w-[min(100%-1.5rem,24rem)]">
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">

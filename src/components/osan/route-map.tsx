@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react"
 import { LocateFixed } from "lucide-react"
 
 import type { OsanFacilityWithRelations } from "@/lib/osan/types"
-import { optimizeRoute, type LatLng } from "@/lib/osan/route"
+import type { LatLng, RoutePoint } from "@/lib/osan/route"
 import { spiderfyPositions } from "@/lib/osan/spiderfy"
 import { placeTypeMarkerColor } from "./osan-utils"
 import { useKakaoLoader } from "./use-kakao-loader"
@@ -12,6 +12,10 @@ import { useKakaoLoader } from "./use-kakao-loader"
 type Props = {
   facilities: OsanFacilityWithRelations[]
   start?: LatLng
+  /** 부모(osan-app)에서 계산한 1-based 방문 순번 */
+  orderById: Map<string, number>
+  /** 부모에서 계산한 동선 순서 (폴리라인) */
+  routeOrder: RoutePoint[]
   selectedId: string | null
   onSelect: (id: string) => void
   onLocate: () => void
@@ -103,6 +107,8 @@ function createMarkerImage(
 export function RouteMap({
   facilities,
   start,
+  orderById,
+  routeOrder,
   selectedId,
   onSelect,
   onLocate,
@@ -115,23 +121,11 @@ export function RouteMap({
   const mapRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
   const overlaysRef = useRef<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
   const lineRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const hoverLabelRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
   const sheetOpenRef = useRef(sheetOpen)
   const peekOpenRef = useRef(peekOpen)
   sheetOpenRef.current = sheetOpen
   peekOpenRef.current = peekOpen
-
-  const routed = useMemo(() => {
-    const points = facilities
-      .filter((f) => f.lat != null && f.lng != null)
-      .map((f) => ({ id: f.id, lat: f.lat!, lng: f.lng! }))
-    return optimizeRoute(points, start)
-  }, [facilities, start])
-
-  const orderIndex = useMemo(() => {
-    const map = new Map<string, number>()
-    routed.order.forEach((p, i) => map.set(p.id, i + 1))
-    return map
-  }, [routed])
 
   /** 동일 좌표 시설은 화면에서만 원형으로 벌려 번호가 겹치지 않게 한다. */
   const displayById = useMemo(() => {
@@ -140,10 +134,10 @@ export function RouteMap({
       .map((f) => ({ id: f.id, lat: f.lat!, lng: f.lng! }))
     // 동선 순으로 넣어 겹친 그룹 안에서도 번호 순으로 배치
     withCoords.sort(
-      (a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0),
+      (a, b) => (orderById.get(a.id) ?? 0) - (orderById.get(b.id) ?? 0),
     )
     return spiderfyPositions(withCoords)
-  }, [facilities, orderIndex])
+  }, [facilities, orderById])
 
   const bottomPad = () => {
     if (sheetOpenRef.current) return Math.round(window.innerHeight * 0.48)
@@ -164,6 +158,8 @@ export function RouteMap({
     overlaysRef.current.forEach((o) => o.setMap(null))
     overlaysRef.current = []
     lineRef.current?.setMap(null)
+    hoverLabelRef.current?.setMap(null)
+    hoverLabelRef.current = null
 
     // 시트 높이 변화 후 컨테이너 크기를 다시 반영한다.
     map.relayout()
@@ -176,7 +172,7 @@ export function RouteMap({
       path.push(origin)
     }
 
-    for (const point of routed.order) {
+    for (const point of routeOrder) {
       const display = displayById.get(point.id) ?? point
       path.push(new window.kakao.maps.LatLng(display.lat, display.lng))
     }
@@ -209,8 +205,9 @@ export function RouteMap({
         ({ lat: facility.lat, lng: facility.lng } as LatLng)
       const position = new window.kakao.maps.LatLng(display.lat, display.lng)
       bounds.extend(position)
-      const index = orderIndex.get(facility.id) ?? 0
+      const index = orderById.get(facility.id) ?? 0
       const selected = facility.id === selectedId
+      const labelText = `${index}. ${facility.name}`
       const marker = new window.kakao.maps.Marker({
         position,
         image: createMarkerImage(
@@ -222,12 +219,36 @@ export function RouteMap({
         ),
         zIndex: selected ? 30 : 10 + index,
         clickable: true,
-        title: `${index}. ${facility.name}`,
+        title: labelText,
       })
       marker.setMap(map)
       window.kakao.maps.event.addListener(marker, "click", () =>
         onSelect(facility.id),
       )
+      // 커스텀 MarkerImage는 브라우저 title 툴팁이 자주 무시되므로, 호버 라벨을 직접 띄운다.
+      window.kakao.maps.event.addListener(marker, "mouseover", () => {
+        hoverLabelRef.current?.setMap(null)
+        const el = document.createElement("div")
+        el.textContent = labelText
+        el.style.cssText =
+          "max-width:16rem;padding:0.35rem 0.55rem;border-radius:0.5rem;" +
+          "background:#111827;color:#fff;font-size:12px;font-weight:600;" +
+          "line-height:1.3;box-shadow:0 4px 12px rgba(0,0,0,.25);" +
+          "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" +
+          "pointer-events:none;transform:translateY(-4px)"
+        hoverLabelRef.current = new window.kakao.maps.CustomOverlay({
+          position,
+          content: el,
+          yAnchor: 1.65,
+          xAnchor: 0.5,
+          zIndex: 100,
+        })
+        hoverLabelRef.current.setMap(map)
+      })
+      window.kakao.maps.event.addListener(marker, "mouseout", () => {
+        hoverLabelRef.current?.setMap(null)
+        hoverLabelRef.current = null
+      })
       overlaysRef.current.push(marker)
     }
 
@@ -240,9 +261,9 @@ export function RouteMap({
     facilities,
     loaded,
     onSelect,
-    orderIndex,
+    orderById,
     peekOpen,
-    routed.order,
+    routeOrder,
     selectedId,
     sheetOpen,
     start,

@@ -7,7 +7,7 @@ export default async function OsanPage() {
   const facilities = await getFacilitiesWithRelations()
 
   return (
-    <main className="bg-background text-foreground">
+    <main className="min-h-dvh bg-background text-foreground lg:h-dvh lg:overflow-hidden">
       <OsanApp initialFacilities={facilities} />
     </main>
   )

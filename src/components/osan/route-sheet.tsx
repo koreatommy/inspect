@@ -32,6 +32,7 @@ export function RouteSheet({
       className={cn(
         "pointer-events-none absolute inset-x-0 bottom-0 z-10 flex max-h-[min(48vh,100%)] flex-col",
         "rounded-t-2xl border bg-background/95 shadow-lg backdrop-blur",
+        "lg:inset-x-3 lg:bottom-3 lg:max-h-[min(52vh,100%)] lg:rounded-2xl",
       )}
     >
       <button
