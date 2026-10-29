@@ -5,14 +5,18 @@ import { Check, Copy, Hourglass, Phone } from "lucide-react"
 import { toast } from "./toast"
 
 import {
+  addNote,
   clearVisitRecord,
+  deleteNote,
   deletePhoto,
   toggleVisited,
+  updateNote,
   updatePhotoMeta,
 } from "@/app/osan/actions"
 import { getFacilityEquipment } from "@/lib/osan/facility-equipment"
 import type {
   OsanFacilityWithRelations,
+  OsanNote,
   OsanPhotoWithUrl,
 } from "@/lib/osan/types"
 import { cn } from "@/lib/utils"
@@ -45,8 +49,12 @@ const BUSY_COPY: Record<BusyKind, { button: string; status: string }> = {
   },
   saveMeta: {
     button: "저장 중…",
-    status: "사진 기구유형·점검내용을 저장하고 있습니다",
+    status: "사진·기타 점검 의견을 저장하고 있습니다",
   },
+}
+
+function noteDraftsFromNotes(notes: OsanNote[]): Record<string, string> {
+  return Object.fromEntries(notes.map((note) => [note.id, note.content]))
 }
 
 type Props = {
@@ -54,6 +62,8 @@ type Props = {
   order?: number
   defaultOpen?: boolean
   onChange: (next: OsanFacilityWithRelations) => void
+  /** 현재 위치 기준 직선 거리 라벨 (예: 240m) */
+  distanceLabel?: string | null
 }
 
 function mergePhotosBySlot(
@@ -65,7 +75,13 @@ function mergePhotosBySlot(
   return [...bySlot.values()].sort((a, b) => a.slot - b.slot)
 }
 
-export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) {
+export function FacilityCard({
+  facility,
+  order,
+  defaultOpen,
+  onChange,
+  distanceLabel,
+}: Props) {
   const [open, setOpen] = useState(Boolean(defaultOpen))
   const [busyKind, setBusyKind] = useState<BusyKind | null>(null)
   const [draftPhotos, setDraftPhotos] = useState<DraftPhoto[]>([])
@@ -76,6 +92,8 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
   )
   const [editAddedPhotos, setEditAddedPhotos] = useState<DraftPhoto[]>([])
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([])
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({})
+  const [editNoteDraft, setEditNoteDraft] = useState("")
   const draftPhotosRef = useRef(draftPhotos)
   const editAddedPhotosRef = useRef(editAddedPhotos)
   draftPhotosRef.current = draftPhotos
@@ -112,6 +130,8 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
   function startMetaEdit() {
     if (busy) return
     setMetaDrafts(photoMetaDraftsFromPhotos(facility.photos))
+    setNoteDrafts(noteDraftsFromNotes(facility.notes))
+    setEditNoteDraft("")
     clearEditAddedPhotos()
     setPendingDeleteIds([])
     setEditingMeta(true)
@@ -122,12 +142,18 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
     if (busy) return
     setEditingMeta(false)
     setMetaDrafts({})
+    setNoteDrafts({})
+    setEditNoteDraft("")
     clearEditAddedPhotos()
     setPendingDeleteIds([])
   }
 
   function patchMetaDraft(photoId: string, next: PhotoMetaDraft) {
     setMetaDrafts((prev) => ({ ...prev, [photoId]: next }))
+  }
+
+  function patchNoteDraft(noteId: string, value: string) {
+    setNoteDrafts((prev) => ({ ...prev, [noteId]: value }))
   }
 
   function markSavedPhotoDeleted(photoId: string) {
@@ -201,22 +227,55 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
         updated.push(uploaded)
       }
 
+      let nextNotes = [...facility.notes]
+      let notesChanged = false
+
+      for (const note of facility.notes) {
+        const draftContent = noteDrafts[note.id]
+        if (draftContent == null) continue
+        const trimmed = draftContent.trim()
+        if (!trimmed) {
+          const res = await deleteNote(note.id)
+          if (!res.ok) throw new Error(res.error)
+          nextNotes = nextNotes.filter((n) => n.id !== note.id)
+          notesChanged = true
+          continue
+        }
+        if (trimmed === note.content) continue
+        const res = await updateNote(note.id, trimmed)
+        if (!res.ok) throw new Error(res.error)
+        nextNotes = nextNotes.map((n) => (n.id === note.id ? res.data : n))
+        notesChanged = true
+      }
+
+      const newNoteTrimmed = editNoteDraft.trim()
+      if (facility.notes.length === 0 && newNoteTrimmed) {
+        const res = await addNote(facility.id, newNoteTrimmed)
+        if (!res.ok) throw new Error(res.error)
+        nextNotes = [res.data, ...nextNotes]
+        notesChanged = true
+      }
+
       onChange({
         ...facility,
         photos: updated.sort((a, b) => a.slot - b.slot),
+        notes: nextNotes,
       })
       setEditingMeta(false)
       setMetaDrafts({})
+      setNoteDrafts({})
+      setEditNoteDraft("")
       clearEditAddedPhotos()
       setPendingDeleteIds([])
 
       const parts: string[] = []
       if (deletedIds.length > 0) parts.push(`${deletedIds.length}장 삭제`)
       if (newlyUploaded.length > 0) parts.push(`${newlyUploaded.length}장 추가`)
+      if (notesChanged) parts.push("기타 의견")
       toast.success(
         parts.length > 0
-          ? `사진 정보 저장 · ${parts.join(" · ")}`
-          : "사진 정보를 저장했습니다",
+          ? `저장 완료 · ${parts.join(" · ")}`
+          : "저장했습니다",
       )
     } catch (e) {
       await Promise.all(newlyUploaded.map((photo) => deletePhoto(photo.id)))
@@ -230,6 +289,10 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
     if (busy) return
 
     if (facility.visited) {
+      const ok = window.confirm(
+        "미완료로 되돌릴까요?\n사진·점검내용은 그대로 두고 완료 표시만 해제됩니다.",
+      )
+      if (!ok) return
       setBusyKind("undo")
       const res = await toggleVisited(facility.id, false)
       setBusyKind(null)
@@ -291,6 +354,8 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
     clearDrafts()
     setEditingMeta(false)
     setMetaDrafts({})
+    setNoteDrafts({})
+    setEditNoteDraft("")
     clearEditAddedPhotos()
     setPendingDeleteIds([])
     onChange({ ...facility, visited: false, photos: [], notes: [] })
@@ -356,45 +421,50 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
             {facility.name}
           </h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {facility.region} · {facility.address}
+            {[facility.region, distanceLabel, facility.address]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
         </div>
       </button>
 
-      <div className="flex gap-2 px-4 pb-3">
-        {facility.phone ? (
-          <a
-            href={`tel:${facility.phone}`}
-            className="flex h-10 flex-1 items-center justify-center gap-1 rounded-lg bg-muted text-sm font-medium"
-          >
-            <Phone className="size-4" />
-            전화
-          </a>
-        ) : null}
-        {hasCoords ? (
-          <RouteNavLinks
-            name={facility.name}
-            lat={facility.lat!}
-            lng={facility.lng!}
-            variant="text"
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => void copyAddress()}
-            className="flex h-10 flex-1 items-center justify-center gap-1 rounded-lg bg-muted text-sm font-medium"
-          >
-            <Copy className="size-4" />
-            주소
-          </button>
-        )}
+      <div className="space-y-2 px-4 pb-3">
+        <div className="flex gap-2">
+          {facility.phone ? (
+            <a
+              href={`tel:${facility.phone}`}
+              className="flex h-10 flex-1 items-center justify-center gap-1 rounded-lg bg-muted text-sm font-medium"
+            >
+              <Phone className="size-4" />
+              전화
+            </a>
+          ) : null}
+          {hasCoords ? (
+            <RouteNavLinks
+              name={facility.name}
+              lat={facility.lat!}
+              lng={facility.lng!}
+              variant="text"
+              className={facility.phone ? "flex-[2]" : "flex-1"}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => void copyAddress()}
+              className="flex h-10 flex-1 items-center justify-center gap-1 rounded-lg bg-muted text-sm font-medium"
+            >
+              <Copy className="size-4" />
+              주소
+            </button>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => void handleVisitedClick()}
           disabled={busy}
           aria-busy={busy}
           className={cn(
-            "flex h-10 flex-1 items-center justify-center gap-1 rounded-lg text-sm font-medium disabled:opacity-80",
+            "flex h-11 w-full items-center justify-center gap-1 rounded-xl text-sm font-medium disabled:opacity-80",
             busyKind === "complete" || busyKind === "undo"
               ? "bg-amber-600 text-white"
               : facility.visited
@@ -442,6 +512,10 @@ export function FacilityCard({ facility, order, defaultOpen, onChange }: Props) 
           savedAsDraft={savedAsDraft}
           editingMeta={editingMeta}
           metaDrafts={metaDrafts}
+          noteDrafts={noteDrafts}
+          editNoteDraft={editNoteDraft}
+          setEditNoteDraft={setEditNoteDraft}
+          onPatchNoteDraft={patchNoteDraft}
           editablePhotos={editablePhotos}
           editAddedPhotos={editAddedPhotos}
           setEditAddedPhotos={setEditAddedPhotos}

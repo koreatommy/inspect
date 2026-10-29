@@ -18,10 +18,14 @@ type Props = {
   locating: boolean
   /** 하단 동선 시트가 펼쳐졌는지 — setBounds 하단 패딩·relayout에 사용 */
   sheetOpen?: boolean
+  /** 시설 미리보기 카드가 열려 있는지 — 하단 패딩 추가 */
+  peekOpen?: boolean
 }
 
 /** 접힌 시트(헤더)에 마커가 가려지지 않도록 */
 const SHEET_PEEK_PAD = 72
+/** 미리보기 카드 + 여백 */
+const PEEK_CARD_PAD = 168
 
 const OSAN_CENTER = { lat: 37.1498, lng: 127.0772 }
 
@@ -104,6 +108,7 @@ export function RouteMap({
   onLocate,
   locating,
   sheetOpen = false,
+  peekOpen = false,
 }: Props) {
   const { loaded, error } = useKakaoLoader()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -111,7 +116,9 @@ export function RouteMap({
   const overlaysRef = useRef<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
   const lineRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
   const sheetOpenRef = useRef(sheetOpen)
+  const peekOpenRef = useRef(peekOpen)
   sheetOpenRef.current = sheetOpen
+  peekOpenRef.current = peekOpen
 
   const routed = useMemo(() => {
     const points = facilities
@@ -138,10 +145,11 @@ export function RouteMap({
     return spiderfyPositions(withCoords)
   }, [facilities, orderIndex])
 
-  const bottomPad = () =>
-    sheetOpenRef.current
-      ? Math.round(window.innerHeight * 0.48)
-      : SHEET_PEEK_PAD
+  const bottomPad = () => {
+    if (sheetOpenRef.current) return Math.round(window.innerHeight * 0.48)
+    if (peekOpenRef.current) return SHEET_PEEK_PAD + PEEK_CARD_PAD
+    return SHEET_PEEK_PAD
+  }
 
   useEffect(() => {
     if (!loaded || !containerRef.current || !window.kakao?.maps) return
@@ -233,8 +241,10 @@ export function RouteMap({
     loaded,
     onSelect,
     orderIndex,
+    peekOpen,
     routed.order,
     selectedId,
+    sheetOpen,
     start,
   ])
 

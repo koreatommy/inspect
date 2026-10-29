@@ -6,12 +6,15 @@ import { List, MapPinned } from "lucide-react"
 import { fallbackCoord } from "@/lib/osan/dong-centroids"
 import type { OsanFacilityWithRelations } from "@/lib/osan/types"
 import { PLACE_TYPES } from "@/lib/osan/types"
-import { optimizeRoute, type LatLng } from "@/lib/osan/route"
+import { haversine, optimizeRoute, type LatLng } from "@/lib/osan/route"
 import { cn } from "@/lib/utils"
 import { FacilityFilters, type VisitedFilter } from "./facility-filters"
 import { FacilityList } from "./facility-list"
+import { FacilityPeekCard } from "./facility-peek-card"
 import { RouteMap } from "./route-map"
 import { RouteSheet } from "./route-sheet"
+import { formatDistance } from "./osan-utils"
+import { toast } from "./toast"
 import { useKakaoGeocode } from "./use-kakao-geocode"
 import { useKakaoLoader } from "./use-kakao-loader"
 
@@ -54,6 +57,20 @@ function matchesQuery(facility: OsanFacilityWithRelations, query: string) {
   return hay.includes(q)
 }
 
+function matchesVisited(facility: OsanFacilityWithRelations, visited: VisitedFilter) {
+  if (visited === "pending") return !facility.visited
+  if (visited === "done") return facility.visited
+  return true
+}
+
+function scrollToFacilityCard(id: string) {
+  requestAnimationFrame(() => {
+    document
+      .getElementById(`osan-card-${id}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+  })
+}
+
 export function OsanApp({ initialFacilities }: Props) {
   const [facilities, setFacilities] = useState(initialFacilities)
   const [tab, setTab] = useState<Tab>("map")
@@ -87,26 +104,44 @@ export function OsanApp({ initialFacilities }: Props) {
     [facilities],
   )
 
-  const counts = useMemo(() => {
-    const next: Record<string, number> = { 전체: facilities.length }
+  const codeLookup = isFacilityCodeQuery(query)
+
+  const placeTypeCounts = useMemo(() => {
+    const base = displayFacilities.filter((facility) => {
+      if (!matchesQuery(facility, query)) return false
+      if (codeLookup) return true
+      return matchesVisited(facility, visited)
+    })
+    const next: Record<string, number> = { 전체: base.length }
     for (const type of PLACE_TYPES) {
-      next[type] = facilities.filter((f) => f.place_type === type).length
+      next[type] = base.filter((f) => f.place_type === type).length
     }
     return next
-  }, [facilities])
+  }, [codeLookup, displayFacilities, query, visited])
+
+  const visitedCounts = useMemo(() => {
+    const base = displayFacilities.filter((facility) => {
+      if (!matchesQuery(facility, query)) return false
+      if (codeLookup) return true
+      if (placeType !== "전체" && facility.place_type !== placeType) return false
+      return true
+    })
+    return {
+      all: base.length,
+      done: base.filter((f) => f.visited).length,
+      pending: base.filter((f) => !f.visited).length,
+    } satisfies Record<VisitedFilter, number>
+  }, [codeLookup, displayFacilities, placeType, query])
 
   const filtered = useMemo(() => {
-    const codeLookup = isFacilityCodeQuery(query)
     return displayFacilities.filter((facility) => {
       if (!matchesQuery(facility, query)) return false
       // 시설번호(숫자) 조회 시에는 설치장소·방문 필터를 무시해 바로 찾는다.
       if (codeLookup) return true
       if (placeType !== "전체" && facility.place_type !== placeType) return false
-      if (visited === "pending" && facility.visited) return false
-      if (visited === "done" && !facility.visited) return false
-      return true
+      return matchesVisited(facility, visited)
     })
-  }, [displayFacilities, placeType, query, visited])
+  }, [codeLookup, displayFacilities, placeType, query, visited])
 
   const routed = useMemo(() => {
     const points = filtered
@@ -138,7 +173,40 @@ export function OsanApp({ initialFacilities }: Props) {
     return ordered
   }, [filtered, routed.order])
 
+  const distanceById = useMemo(() => {
+    const map = new Map<string, string>()
+    if (!start) return map
+    for (const facility of displayFacilities) {
+      if (facility.lat == null || facility.lng == null) continue
+      map.set(
+        facility.id,
+        formatDistance(haversine(start, { lat: facility.lat, lng: facility.lng })),
+      )
+    }
+    return map
+  }, [displayFacilities, start])
+
+  const selectedFacility = useMemo(
+    () =>
+      selectedId
+        ? (displayFacilities.find((f) => f.id === selectedId) ?? null)
+        : null,
+    [displayFacilities, selectedId],
+  )
+
   const doneCount = facilities.filter((f) => f.visited).length
+  const today = new Date()
+  const todayLabel = today.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  })
+  const todayIso = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-")
 
   function patchFacility(next: OsanFacilityWithRelations) {
     setFacilities((prev) =>
@@ -148,35 +216,94 @@ export function OsanApp({ initialFacilities }: Props) {
     )
   }
 
+  function goToFacilityList(id: string) {
+    setSelectedId(id)
+    setTab("list")
+    scrollToFacilityCard(id)
+  }
+
   function locate() {
-    if (!navigator.geolocation) return
+    if (!navigator.geolocation) {
+      toast.error("이 기기에서 위치를 사용할 수 없습니다.")
+      return
+    }
     setLocating(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setStart({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        const nextStart = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        }
+        setStart(nextStart)
         setLocating(false)
+
+        const points = filtered
+          .filter((f) => f.lat != null && f.lng != null)
+          .map((f) => ({ id: f.id, lat: f.lat!, lng: f.lng! }))
+        const nextRoute = optimizeRoute(points, nextStart)
+        const firstId = nextRoute.order[0]?.id
+        if (firstId) {
+          setSelectedId(firstId)
+          setSheetOpen(false)
+        }
+        toast.success(
+          firstId
+            ? "현재 위치 기준으로 동선을 다시 잡았습니다"
+            : "현재 위치를 반영했습니다",
+        )
       },
-      () => setLocating(false),
+      () => {
+        setLocating(false)
+        toast.error("위치를 가져오지 못했습니다. 권한을 확인해 주세요.")
+      },
       { enableHighAccuracy: true, timeout: 8000 },
     )
   }
 
   function selectFromMap(id: string) {
     setSelectedId(id)
-    setSheetOpen(true)
+    setSheetOpen(false)
   }
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col">
       <header className="sticky top-0 z-20 border-b bg-background/95 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur">
-        <div className="flex items-end justify-between">
+        <div className="space-y-2">
           <div>
             <p className="text-xs text-muted-foreground">오산시 지도점검</p>
-            <h1 className="text-lg font-semibold">현장 방문</h1>
+            <div className="flex items-baseline justify-between gap-3">
+              <h1 className="text-lg font-semibold">현장 방문</h1>
+              <time
+                dateTime={todayIso}
+                className="shrink-0 text-sm tabular-nums text-muted-foreground"
+              >
+                {todayLabel}
+              </time>
+            </div>
           </div>
-          <p className="text-sm tabular-nums text-muted-foreground">
-            {doneCount}/{facilities.length} 완료
-          </p>
+          <div className="flex items-center gap-2.5">
+            <div
+              className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={facilities.length}
+              aria-valuenow={doneCount}
+              aria-label={`점검 완료 ${doneCount}건 / 전체 ${facilities.length}건`}
+            >
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-[width] duration-300 ease-out"
+                style={{
+                  width:
+                    facilities.length === 0
+                      ? "0%"
+                      : `${(doneCount / facilities.length) * 100}%`,
+                }}
+              />
+            </div>
+            <p className="shrink-0 text-sm tabular-nums text-muted-foreground">
+              {doneCount}/{facilities.length} 완료
+            </p>
+          </div>
         </div>
         <div className="mt-3">
           <FacilityFilters
@@ -186,7 +313,9 @@ export function OsanApp({ initialFacilities }: Props) {
             onVisited={setVisited}
             query={query}
             onQuery={setQuery}
-            counts={counts}
+            placeTypeCounts={placeTypeCounts}
+            visitedCounts={visitedCounts}
+            resultCount={filtered.length}
           />
         </div>
       </header>
@@ -202,22 +331,24 @@ export function OsanApp({ initialFacilities }: Props) {
               onLocate={locate}
               locating={locating}
               sheetOpen={sheetOpen}
+              peekOpen={Boolean(selectedFacility) && !sheetOpen}
             />
+            {selectedFacility && !sheetOpen ? (
+              <FacilityPeekCard
+                facility={selectedFacility}
+                distanceLabel={distanceById.get(selectedFacility.id)}
+                onClose={() => setSelectedId(null)}
+                onInspect={() => goToFacilityList(selectedFacility.id)}
+              />
+            ) : null}
             <RouteSheet
               open={sheetOpen}
               onOpenChange={setSheetOpen}
               ordered={orderedFacilities}
               totalMeters={routed.totalMeters}
               selectedId={selectedId}
-              onSelect={(id) => {
-                setSelectedId(id)
-                setTab("list")
-                requestAnimationFrame(() => {
-                  document
-                    .getElementById(`osan-card-${id}`)
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                })
-              }}
+              distanceById={distanceById}
+              onSelect={goToFacilityList}
             />
           </div>
         ) : (
@@ -227,6 +358,8 @@ export function OsanApp({ initialFacilities }: Props) {
               orderById={orderById}
               selectedId={selectedId}
               onChange={patchFacility}
+              distanceById={distanceById}
+              hasStart={Boolean(start)}
             />
           </div>
         )}

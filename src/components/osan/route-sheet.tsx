@@ -14,6 +14,8 @@ type Props = {
   totalMeters: number
   selectedId: string | null
   onSelect: (id: string) => void
+  /** facility id → 현재 위치 기준 거리 라벨 */
+  distanceById?: Map<string, string>
 }
 
 export function RouteSheet({
@@ -23,6 +25,7 @@ export function RouteSheet({
   totalMeters,
   selectedId,
   onSelect,
+  distanceById,
 }: Props) {
   return (
     <section
@@ -50,6 +53,7 @@ export function RouteSheet({
         <ol className="pointer-events-auto min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-3">
           {ordered.map((facility, index) => {
             const hasCoords = facility.lat != null && facility.lng != null
+            const distanceLabel = distanceById?.get(facility.id)
             return (
               <li key={facility.id}>
                 <div
@@ -71,7 +75,9 @@ export function RouteSheet({
                         {facility.name}
                       </span>
                       <span className="block truncate text-[11px] text-muted-foreground">
-                        {facility.region} · {facility.address}
+                        {[facility.region, distanceLabel, facility.address]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </span>
                     </span>
                   </button>

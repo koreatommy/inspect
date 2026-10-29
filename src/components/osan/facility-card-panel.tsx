@@ -28,6 +28,10 @@ type Props = {
   savedAsDraft: DraftPhoto[]
   editingMeta: boolean
   metaDrafts: Record<string, PhotoMetaDraft>
+  noteDrafts: Record<string, string>
+  editNoteDraft: string
+  setEditNoteDraft: (value: string) => void
+  onPatchNoteDraft: (noteId: string, value: string) => void
   editablePhotos: OsanPhotoWithUrl[]
   editAddedPhotos: DraftPhoto[]
   setEditAddedPhotos: Dispatch<SetStateAction<DraftPhoto[]>>
@@ -85,6 +89,10 @@ export function FacilityCardPanel({
   savedAsDraft,
   editingMeta,
   metaDrafts,
+  noteDrafts,
+  editNoteDraft,
+  setEditNoteDraft,
+  onPatchNoteDraft,
   editablePhotos,
   editAddedPhotos,
   setEditAddedPhotos,
@@ -183,10 +191,12 @@ export function FacilityCardPanel({
         <h4 className="mb-2 text-sm font-medium">기타 점검 의견</h4>
         <MemoSection
           notes={facility.notes}
-          draft={draftNote}
-          onDraftChange={setDraftNote}
-          readOnly={facility.visited}
+          draft={editingMeta ? editNoteDraft : draftNote}
+          onDraftChange={editingMeta ? setEditNoteDraft : setDraftNote}
+          readOnly={facility.visited && !editingMeta}
           disabled={busy}
+          noteDrafts={editingMeta ? noteDrafts : undefined}
+          onNoteDraftChange={editingMeta ? onPatchNoteDraft : undefined}
         />
       </section>
       {editingMeta ? (
