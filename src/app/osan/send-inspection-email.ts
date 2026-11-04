@@ -23,11 +23,15 @@ export async function sendInspectionEmail(
   try {
     const apiKey = process.env.RESEND_API_KEY?.trim()
     const from = process.env.RESEND_FROM_EMAIL?.trim()
+    const replyTo = process.env.RESEND_REPLY_TO?.trim()
     if (!apiKey) {
       return { ok: false, error: "RESEND_API_KEY가 설정되지 않았습니다." }
     }
     if (!from) {
       return { ok: false, error: "RESEND_FROM_EMAIL이 설정되지 않았습니다." }
+    }
+    if (replyTo && !isValidEmail(replyTo)) {
+      return { ok: false, error: "RESEND_REPLY_TO 이메일 형식이 올바르지 않습니다." }
     }
 
     const to = draft.to.trim()
@@ -91,6 +95,7 @@ export async function sendInspectionEmail(
     const { data, error } = await resend.emails.send({
       from,
       to: [to],
+      ...(replyTo ? { replyTo } : {}),
       subject: draft.subject.trim(),
       html,
       attachments,
