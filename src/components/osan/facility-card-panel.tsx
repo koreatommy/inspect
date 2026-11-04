@@ -1,7 +1,7 @@
 "use client"
 
-import type { Dispatch, ReactNode, SetStateAction } from "react"
-import { Check, Copy, Hourglass, MapPinned, Pencil, Trash2 } from "lucide-react"
+import { useState, type Dispatch, type ReactNode, type SetStateAction } from "react"
+import { Check, Copy, Hourglass, Mail, MapPinned, Pencil, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 import type { FacilityContactField } from "@/app/osan/actions"
@@ -19,6 +19,7 @@ import {
   type PhotoMetaDraft,
 } from "./photo-meta-editor"
 import { PhotoUploader } from "./photo-uploader"
+import { SendInspectionSheet } from "./send-inspection-sheet"
 import { cpfFacilityUrl, kakaoRouteUrl } from "./osan-utils"
 
 type Props = {
@@ -122,6 +123,8 @@ export function FacilityCardPanel({
   onClearVisit,
   onContactSaved,
 }: Props) {
+  const [sendOpen, setSendOpen] = useState(false)
+
   return (
     <div className="space-y-4 border-t px-4 py-4">
       <section className="space-y-1.5">
@@ -273,51 +276,67 @@ export function FacilityCardPanel({
           </button>
         </div>
       ) : facility.visited ? (
-        <div className="grid grid-cols-2 gap-2">
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onVisitedClick}
+              disabled={busy}
+              aria-busy={busyKind === "complete" || busyKind === "undo"}
+              className={cn(
+                "flex h-11 items-center justify-center gap-1 rounded-xl text-sm font-medium disabled:opacity-80",
+                busyKind === "complete" || busyKind === "undo"
+                  ? "bg-amber-600 text-white"
+                  : "bg-emerald-600 text-white",
+              )}
+            >
+              {busyKind === "complete" || busyKind === "undo" ? (
+                <>
+                  <Hourglass className="size-4 animate-hourglass" aria-hidden />
+                  {busyKind === "complete" ? "저장 중…" : "변경 중…"}
+                </>
+              ) : (
+                <>
+                  <Check className="size-4" />
+                  완료됨
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onClearVisit}
+              disabled={busy}
+              aria-busy={busyKind === "clear"}
+              className="flex h-11 items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 text-sm font-medium text-destructive active:scale-[0.99] disabled:opacity-50"
+            >
+              {busyKind === "clear" ? (
+                <>
+                  <Hourglass className="size-4 animate-hourglass" aria-hidden />
+                  삭제 중…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="size-4" />
+                  완료 기록 삭제
+                </>
+              )}
+            </button>
+          </div>
           <button
             type="button"
-            onClick={onVisitedClick}
+            onClick={() => setSendOpen(true)}
             disabled={busy}
-            aria-busy={busyKind === "complete" || busyKind === "undo"}
-            className={cn(
-              "flex h-11 items-center justify-center gap-1 rounded-xl text-sm font-medium disabled:opacity-80",
-              busyKind === "complete" || busyKind === "undo"
-                ? "bg-amber-600 text-white"
-                : "bg-emerald-600 text-white",
-            )}
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border bg-muted/40 text-sm font-medium active:scale-[0.99] disabled:opacity-50"
           >
-            {busyKind === "complete" || busyKind === "undo" ? (
-              <>
-                <Hourglass className="size-4 animate-hourglass" aria-hidden />
-                {busyKind === "complete" ? "저장 중…" : "변경 중…"}
-              </>
-            ) : (
-              <>
-                <Check className="size-4" />
-                완료됨
-              </>
-            )}
+            <Mail className="size-4" aria-hidden />
+            점검내용 송부
           </button>
-          <button
-            type="button"
-            onClick={onClearVisit}
-            disabled={busy}
-            aria-busy={busyKind === "clear"}
-            className="flex h-11 items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 text-sm font-medium text-destructive active:scale-[0.99] disabled:opacity-50"
-          >
-            {busyKind === "clear" ? (
-              <>
-                <Hourglass className="size-4 animate-hourglass" aria-hidden />
-                삭제 중…
-              </>
-            ) : (
-              <>
-                <Trash2 className="size-4" />
-                완료 기록 삭제
-              </>
-            )}
-          </button>
-        </div>
+          <SendInspectionSheet
+            open={sendOpen}
+            onOpenChange={setSendOpen}
+            facility={facility}
+          />
+        </>
       ) : (
         <button
           type="button"
