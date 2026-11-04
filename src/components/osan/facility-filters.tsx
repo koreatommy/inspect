@@ -54,7 +54,7 @@ export function FacilityFilters({
         type="search"
         value={query}
         onChange={(e) => onQuery(e.target.value)}
-        placeholder="시설명·시설번호·주소·관리자 검색"
+        placeholder="시설명·시설번호·주소·관리자·이메일 검색"
         inputMode="search"
         enterKeyHint="search"
         className="h-11 w-full rounded-xl border border-input bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"

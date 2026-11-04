@@ -13,6 +13,7 @@ type Props = {
   distanceById?: Map<string, string>
   /** 현재 위치가 있으면 true — 다음 방문 라벨에 반영 */
   hasStart?: boolean
+  onRequestSend?: (facility: OsanFacilityWithRelations) => void
 }
 
 export function FacilityList({
@@ -22,6 +23,7 @@ export function FacilityList({
   onChange,
   distanceById,
   hasStart = false,
+  onRequestSend,
 }: Props) {
   if (facilities.length === 0) {
     return (
@@ -71,6 +73,7 @@ export function FacilityList({
             selected={selectedId === facility.id}
             onChange={onChange}
             distanceLabel={distanceById?.get(facility.id)}
+            onRequestSend={onRequestSend}
           />
         </div>
       ))}

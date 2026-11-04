@@ -17,7 +17,13 @@ import {
 } from "@/lib/osan/inspection-email-draft"
 import type { OsanFacilityWithRelations } from "@/lib/osan/types"
 import { cn } from "@/lib/utils"
+import {
+  SendInspectionConfirmDialog,
+  SendInspectionSuccessDialog,
+} from "./send-inspection-dialogs"
 import { toast } from "./toast"
+
+type DialogPhase = "confirm" | "success" | null
 
 type Props = {
   open: boolean
@@ -53,21 +59,47 @@ function Field({
   )
 }
 
+function resolveRecipient(draft: InspectionEmailDraft) {
+  return draft.to.trim() || draft.contactEmail.trim()
+}
+
 export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
   const [draft, setDraft] = useState<InspectionEmailDraft>(() =>
     createDraftFromFacility(facility),
   )
   const [sending, setSending] = useState(false)
+  const [dialogPhase, setDialogPhase] = useState<DialogPhase>(null)
+  const [sentTo, setSentTo] = useState("")
 
+  // 시트 오픈 시·시설 전환 시에만 초안을 다시 채운다.
+  // facility 객체 참조가 바뀌어도(좌표 보정 등) 입력 중인 수신 이메일을 지우지 않는다.
+  const facilityId = facility.id
   useEffect(() => {
     if (!open) return
     setDraft(createDraftFromFacility(facility))
-  }, [open, facility])
+    setDialogPhase(null)
+    setSentTo("")
+    // facility는 open/facilityId 변경 시점의 스냅샷만 사용
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, facilityId])
+
+  function patchEmailFields(value: string) {
+    // 수신 이메일·관리주체 이메일을 같이 맞춰, 어느 칸에 넣어도 송부 가능
+    setDraft((prev) => ({
+      ...prev,
+      to: value,
+      contactEmail: value,
+    }))
+  }
 
   function patch<K extends keyof InspectionEmailDraft>(
     key: K,
     value: InspectionEmailDraft[K],
   ) {
+    if (key === "to" || key === "contactEmail") {
+      patchEmailFields(String(value))
+      return
+    }
     setDraft((prev) => ({ ...prev, [key]: value }))
   }
 
@@ -83,33 +115,59 @@ export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
     }))
   }
 
-  async function handleSend() {
+  const recipient = resolveRecipient(draft)
+
+  function requestSend() {
     if (sending) return
-    if (!draft.to.trim()) {
+    if (!recipient) {
       toast.error("수신 이메일을 입력해 주세요.")
+      return
+    }
+    setDialogPhase("confirm")
+  }
+
+  async function confirmSend() {
+    if (sending) return
+    const to = recipient
+    if (!to) {
+      toast.error("수신 이메일을 입력해 주세요.")
+      setDialogPhase(null)
       return
     }
     setSending(true)
     try {
-      const result = await sendInspectionEmail(draft)
+      const result = await sendInspectionEmail({
+        ...draft,
+        to,
+        contactEmail: draft.contactEmail.trim() || to,
+      })
       if (!result.ok) {
         toast.error(result.error)
+        setDialogPhase(null)
         return
       }
-      toast.success("점검내용을 송부했습니다.")
-      onOpenChange(false)
+      setSentTo(to)
+      setDialogPhase("success")
     } finally {
       setSending(false)
     }
   }
 
-  const canSend = Boolean(draft.to.trim()) && !sending
+  function finishSuccess() {
+    setDialogPhase(null)
+    onOpenChange(false)
+  }
+
+  const busy = sending || dialogPhase === "success"
+  const canSend = Boolean(recipient) && !busy
 
   return (
+    <>
     <Sheet
       open={open}
       onOpenChange={(next) => {
-        if (sending) return
+        if (busy) return
+        if (!next) setDialogPhase(null)
         onOpenChange(next)
       }}
     >
@@ -135,7 +193,7 @@ export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              disabled={sending}
+              disabled={busy}
               className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted disabled:opacity-50"
               aria-label="닫기"
             >
@@ -151,18 +209,22 @@ export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
                 type="email"
                 value={draft.to}
                 onChange={(e) => patch("to", e.target.value)}
-                disabled={sending}
+                disabled={busy}
                 placeholder="manager@example.com"
                 className={fieldClassName}
-                autoComplete="email"
+                autoComplete="off"
+                inputMode="email"
               />
+              <span className="block text-[11px] leading-snug text-muted-foreground">
+                등록된 이메일이 없어도 원하는 주소로 보낼 수 있습니다.
+              </span>
             </Field>
             <Field label="제목">
               <input
                 type="text"
                 value={draft.subject}
                 onChange={(e) => patch("subject", e.target.value)}
-                disabled={sending}
+                disabled={busy}
                 className={fieldClassName}
               />
             </Field>
@@ -170,7 +232,7 @@ export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
 
           <section className="space-y-3">
             <SectionTitle>관리주체 기본정보</SectionTitle>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <dl className="grid gap-3 sm:grid-cols-2">
               {(
                 [
                   ["name", "시설명"],
@@ -185,17 +247,14 @@ export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
                   ["safetyManager", "안전관리자"],
                 ] as const
               ).map(([key, label]) => (
-                <Field key={key} label={label}>
-                  <input
-                    type="text"
-                    value={draft[key]}
-                    onChange={(e) => patch(key, e.target.value)}
-                    disabled={sending}
-                    className={fieldClassName}
-                  />
-                </Field>
+                <div key={key} className="space-y-1.5">
+                  <dt className="text-xs text-muted-foreground">{label}</dt>
+                  <dd className="break-words text-sm">
+                    {draft[key].trim() || "—"}
+                  </dd>
+                </div>
               ))}
-            </div>
+            </dl>
           </section>
 
           <section className="space-y-3">
@@ -231,7 +290,7 @@ export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
                                 included: e.target.checked,
                               })
                             }
-                            disabled={sending}
+                            disabled={busy}
                             className="size-4 rounded border"
                           />
                           메일에 포함
@@ -244,7 +303,7 @@ export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
                               equipmentType: e.target.value,
                             })
                           }
-                          disabled={sending || !photo.included}
+                          disabled={busy || !photo.included}
                           placeholder="기구유형"
                           className={fieldClassName}
                         />
@@ -256,7 +315,7 @@ export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
                               caption: e.target.value,
                             })
                           }
-                          disabled={sending || !photo.included}
+                          disabled={busy || !photo.included}
                           placeholder="캡션"
                           className={fieldClassName}
                         />
@@ -276,7 +335,7 @@ export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
                   type="text"
                   value={draft.inspectorName}
                   onChange={(e) => patch("inspectorName", e.target.value)}
-                  disabled={sending}
+                  disabled={busy}
                   className={fieldClassName}
                 />
               </Field>
@@ -289,7 +348,7 @@ export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
                       : draft.inspectedAtLabel
                   }
                   onChange={(e) => patch("inspectedAtLabel", e.target.value)}
-                  disabled={sending}
+                  disabled={busy}
                   className={fieldClassName}
                 />
               </Field>
@@ -298,7 +357,7 @@ export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
               <textarea
                 value={draft.notesText}
                 onChange={(e) => patch("notesText", e.target.value)}
-                disabled={sending}
+                disabled={busy}
                 rows={4}
                 className={textareaClassName}
               />
@@ -307,7 +366,7 @@ export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
               <textarea
                 value={draft.closing}
                 onChange={(e) => patch("closing", e.target.value)}
-                disabled={sending}
+                disabled={busy}
                 rows={3}
                 className={textareaClassName}
               />
@@ -318,7 +377,7 @@ export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
         <div className="shrink-0 border-t px-4 py-3">
           <button
             type="button"
-            onClick={handleSend}
+            onClick={requestSend}
             disabled={!canSend}
             aria-busy={sending}
             className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-foreground text-sm font-medium text-background disabled:opacity-50"
@@ -338,5 +397,21 @@ export function SendInspectionSheet({ open, onOpenChange, facility }: Props) {
         </div>
       </SheetContent>
     </Sheet>
+
+    <SendInspectionConfirmDialog
+      open={dialogPhase === "confirm"}
+      recipient={recipient}
+      facilityName={draft.name.trim() || facility.name}
+      subject={draft.subject.trim()}
+      sending={sending}
+      onCancel={() => setDialogPhase(null)}
+      onConfirm={() => void confirmSend()}
+    />
+    <SendInspectionSuccessDialog
+      open={dialogPhase === "success"}
+      recipient={sentTo}
+      onClose={finishSuccess}
+    />
+    </>
   )
 }

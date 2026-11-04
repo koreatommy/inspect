@@ -14,6 +14,7 @@ import { FacilityList } from "./facility-list"
 import { FacilityPeekCard } from "./facility-peek-card"
 import { RouteMap } from "./route-map"
 import { RouteSheet } from "./route-sheet"
+import { SendInspectionSheet } from "./send-inspection-sheet"
 import { formatDistance } from "./osan-utils"
 import { toast } from "./toast"
 import { useKakaoGeocode } from "./use-kakao-geocode"
@@ -50,6 +51,7 @@ function matchesQuery(facility: OsanFacilityWithRelations, query: string) {
     facility.representative,
     facility.facility_code,
     facility.region,
+    facility.email,
     facility.no != null ? String(facility.no) : null,
   ]
     .filter(Boolean)
@@ -87,6 +89,8 @@ export function OsanApp({ initialFacilities }: Props) {
   const [query, setQuery] = useState("")
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [sendFacility, setSendFacility] =
+    useState<OsanFacilityWithRelations | null>(null)
   const [start, setStart] = useState<LatLng | undefined>(undefined)
   const [locating, setLocating] = useState(false)
   const { loaded } = useKakaoLoader()
@@ -280,6 +284,14 @@ export function OsanApp({ initialFacilities }: Props) {
     scrollToFacilityCard(id)
   }
 
+  function openSendSheet(facility: OsanFacilityWithRelations) {
+    // 이메일 검색으로 목록이 비어 시트까지 사라지는 일을 막기 위해,
+    // 송부 시작 시 이메일 형태 검색어는 비운다.
+    if (query.includes("@")) setQuery("")
+    setSelectedId(facility.id)
+    setSendFacility(facility)
+  }
+
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col lg:mx-0 lg:h-dvh lg:max-w-none">
       <header className="sticky top-0 z-20 border-b bg-background/95 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur lg:static lg:shrink-0 lg:px-6">
@@ -387,10 +399,21 @@ export function OsanApp({ initialFacilities }: Props) {
               onChange={patchFacility}
               distanceById={distanceById}
               hasStart={Boolean(start)}
+              onRequestSend={openSendSheet}
             />
           </div>
         ) : null}
       </div>
+
+      {sendFacility ? (
+        <SendInspectionSheet
+          open
+          onOpenChange={(next) => {
+            if (!next) setSendFacility(null)
+          }}
+          facility={sendFacility}
+        />
+      ) : null}
 
       <nav className="sticky bottom-0 z-20 grid grid-cols-2 border-t bg-background pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden">
         {(

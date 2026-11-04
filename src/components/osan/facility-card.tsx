@@ -76,6 +76,7 @@ type Props = {
   onChange: (next: OsanFacilityWithRelations) => void
   /** 현재 위치 기준 직선 거리 라벨 (예: 240m) */
   distanceLabel?: string | null
+  onRequestSend?: (facility: OsanFacilityWithRelations) => void
 }
 
 function mergePhotosBySlot(
@@ -93,6 +94,7 @@ export function FacilityCard({
   selected = false,
   onChange,
   distanceLabel,
+  onRequestSend,
 }: Props) {
   const [open, setOpen] = useState(selected)
   const [busyKind, setBusyKind] = useState<BusyKind | null>(null)
@@ -615,6 +617,7 @@ export function FacilityCard({
           onVisitedClick={() => void handleVisitedClick()}
           onClearVisit={() => void handleClearVisit()}
           onContactSaved={handleContactSaved}
+          onRequestSend={() => onRequestSend?.(facility)}
         />
       ) : null}
     </article>

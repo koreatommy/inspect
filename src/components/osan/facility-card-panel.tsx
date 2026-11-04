@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type Dispatch, type ReactNode, type SetStateAction } from "react"
+import { type Dispatch, type ReactNode, type SetStateAction } from "react"
 import { Check, Copy, Hourglass, Mail, MapPinned, Pencil, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -19,7 +19,6 @@ import {
   type PhotoMetaDraft,
 } from "./photo-meta-editor"
 import { PhotoUploader } from "./photo-uploader"
-import { SendInspectionSheet } from "./send-inspection-sheet"
 import { cpfFacilityUrl, kakaoRouteUrl } from "./osan-utils"
 
 type Props = {
@@ -55,6 +54,7 @@ type Props = {
   onVisitedClick: () => void
   onClearVisit: () => void
   onContactSaved: (field: FacilityContactField, value: string | null) => void
+  onRequestSend: () => void
 }
 
 function InfoRow({
@@ -122,9 +122,8 @@ export function FacilityCardPanel({
   onVisitedClick,
   onClearVisit,
   onContactSaved,
+  onRequestSend,
 }: Props) {
-  const [sendOpen, setSendOpen] = useState(false)
-
   return (
     <div className="space-y-4 border-t px-4 py-4">
       <section className="space-y-1.5">
@@ -324,18 +323,13 @@ export function FacilityCardPanel({
           </div>
           <button
             type="button"
-            onClick={() => setSendOpen(true)}
+            onClick={onRequestSend}
             disabled={busy}
             className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border bg-muted/40 text-sm font-medium active:scale-[0.99] disabled:opacity-50"
           >
             <Mail className="size-4" aria-hidden />
             점검내용 송부
           </button>
-          <SendInspectionSheet
-            open={sendOpen}
-            onOpenChange={setSendOpen}
-            facility={facility}
-          />
         </>
       ) : (
         <button
