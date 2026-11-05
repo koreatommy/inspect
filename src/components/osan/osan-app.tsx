@@ -189,6 +189,22 @@ export function OsanApp({ initialFacilities }: Props) {
     return ordered
   }, [filtered, routed.order])
 
+  /** 목록용: 완료 필터는 점검일시 최신순, 그 외는 동선 순 */
+  const listFacilities = useMemo(() => {
+    if (visited !== "done") return orderedFacilities
+    return [...filtered].sort((a, b) => {
+      const aAt = a.inspected_at ?? ""
+      const bAt = b.inspected_at ?? ""
+      if (aAt !== bAt) return bAt.localeCompare(aAt)
+      return (a.no ?? 0) - (b.no ?? 0)
+    })
+  }, [filtered, orderedFacilities, visited])
+
+  const listOrderById = useMemo(() => {
+    if (visited !== "done") return orderById
+    return new Map<string, number>()
+  }, [orderById, visited])
+
   const distanceById = useMemo(() => {
     const map = new Map<string, string>()
     if (!start) return map
@@ -393,12 +409,13 @@ export function OsanApp({ initialFacilities }: Props) {
             )}
           >
             <FacilityList
-              facilities={orderedFacilities}
-              orderById={orderById}
+              facilities={listFacilities}
+              orderById={listOrderById}
               selectedId={selectedId}
               onChange={patchFacility}
               distanceById={distanceById}
               hasStart={Boolean(start)}
+              showNextVisit={visited !== "done"}
               onRequestSend={openSendSheet}
             />
           </div>

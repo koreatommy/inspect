@@ -13,6 +13,8 @@ type Props = {
   distanceById?: Map<string, string>
   /** 현재 위치가 있으면 true — 다음 방문 라벨에 반영 */
   hasStart?: boolean
+  /** 동선 다음 방문 배너 표시 (완료 목록 등에서는 숨김) */
+  showNextVisit?: boolean
   onRequestSend?: (facility: OsanFacilityWithRelations) => void
 }
 
@@ -23,6 +25,7 @@ export function FacilityList({
   onChange,
   distanceById,
   hasStart = false,
+  showNextVisit = true,
   onRequestSend,
 }: Props) {
   if (facilities.length === 0) {
@@ -44,26 +47,28 @@ export function FacilityList({
 
   return (
     <div className="space-y-3 pb-8">
-      <button
-        type="button"
-        onClick={() => scrollToFacility(next.id)}
-        className="flex w-full items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-3 text-left"
-      >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <MapPinned className="size-4" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[11px] font-medium text-primary">
-            {hasStart ? "현재 위치 기준 다음 방문" : "동선 다음 방문"}
+      {showNextVisit ? (
+        <button
+          type="button"
+          onClick={() => scrollToFacility(next.id)}
+          className="flex w-full items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-3 text-left"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <MapPinned className="size-4" />
           </span>
-          <span className="mt-0.5 block truncate text-sm font-semibold">
-            {next.name}
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11px] font-medium text-primary">
+              {hasStart ? "현재 위치 기준 다음 방문" : "동선 다음 방문"}
+            </span>
+            <span className="mt-0.5 block truncate text-sm font-semibold">
+              {next.name}
+            </span>
+            <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+              {[next.region, nextDistance].filter(Boolean).join(" · ")}
+            </span>
           </span>
-          <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-            {[next.region, nextDistance].filter(Boolean).join(" · ")}
-          </span>
-        </span>
-      </button>
+        </button>
+      ) : null}
 
       {facilities.map((facility) => (
         <div key={facility.id} id={`osan-card-${facility.id}`}>

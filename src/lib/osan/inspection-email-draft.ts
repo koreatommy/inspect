@@ -32,7 +32,7 @@ export type InspectionEmailDraft = {
 }
 
 const DEFAULT_CLOSING =
-  "점검 관련하여 궁금하신 점이 있으시면 회신 부탁드립니다. 감사합니다."
+  "위에 점검 지적사항은 수리 또는 조치후 사진을 hieugenelee@gmail.com으로 송부 바랍니다.(문의 010-2327-1730)\n보내실때 시설번호와 시설명을 꼭 기재해주세요. 감사합니다."
 
 export function createDraftFromFacility(
   facility: OsanFacilityWithRelations,
