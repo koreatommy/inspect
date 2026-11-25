@@ -9,6 +9,7 @@ import { getSupabaseEnv } from "./env"
 const publicRoutes = ["/", "/login", "/auth/callback", "/ai", "/api/ai", "/osan"]
 
 function isPublicRoute(pathname: string) {
+  if (pathname.endsWith(".html")) return true
   return publicRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   )

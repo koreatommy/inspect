@@ -56,4 +56,6 @@ export const PLACE_TYPES = [
   "놀이제공영업소",
   "대규모점포",
   "주상복합",
+  "도시공원",
+  "공공도서관",
 ] as const

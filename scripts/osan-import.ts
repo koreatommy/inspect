@@ -1,12 +1,13 @@
 /**
  * 오산 시설 적재 + 좌표 백필 (1회성, 재실행 가능)
  *
- * 1) 엑셀(있으면) 또는 scripts/osan-facilities.json 을 읽어 osan.facilities upsert
+ * 1) 엑셀(있으면) 또는 JSON 시드를 읽어 osan.facilities upsert
  * 2) lat/lng가 비어 있는 행을 카카오 REST(없으면 Nominatim)로 지오코딩
  *
  * 실행: npx tsx scripts/osan-import.ts
  * 필요 env(.env.local): NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- * 선택 env: KAKAO_REST_API_KEY, OSAN_XLSX_PATH
+ * 선택 env: KAKAO_REST_API_KEY, OSAN_XLSX_PATH, OSAN_JSON_PATH
+ *   - OSAN_JSON_PATH 예: scripts/osan-facilities-add-82.json (82건 추가분)
  */
 import { spawnSync } from "node:child_process"
 import { existsSync, readFileSync } from "node:fs"
@@ -32,6 +33,8 @@ type SeedRow = {
   safety_manager: string | null
   inspection_status: string | null
   address: string | null
+  lat?: number | null
+  lng?: number | null
 }
 
 function loadEnvLocal() {
@@ -86,6 +89,14 @@ print(json.dumps(out, ensure_ascii=False))
 }
 
 function loadRows(): SeedRow[] {
+  const jsonEnv = process.env.OSAN_JSON_PATH?.trim()
+  if (jsonEnv) {
+    const jsonPath = resolve(process.cwd(), jsonEnv)
+    const rows = JSON.parse(readFileSync(jsonPath, "utf8")) as SeedRow[]
+    console.log(`JSON 시드에서 ${rows.length}건 로드: ${jsonPath}`)
+    return rows
+  }
+
   const xlsxPath = process.env.OSAN_XLSX_PATH?.trim() || DEFAULT_XLSX
   const fromExcel = loadFromExcel(xlsxPath)
   if (fromExcel && fromExcel.length > 0) {
@@ -94,7 +105,7 @@ function loadRows(): SeedRow[] {
   }
   const jsonPath = resolve(process.cwd(), "scripts/osan-facilities.json")
   const rows = JSON.parse(readFileSync(jsonPath, "utf8")) as SeedRow[]
-  console.log(`JSON 시드에서 ${rows.length}건 로드`)
+  console.log(`JSON 시드에서 ${rows.length}건 로드: ${jsonPath}`)
   return rows
 }
 
@@ -124,6 +135,10 @@ async function main() {
     rows.map((row) => ({
       ...row,
       facility_code: row.facility_code || String(row.no),
+      // 신규 추가분은 미완료로 유지 (기존 완료 건을 덮어쓰지 않도록 코드가 겹치지 않아야 함)
+      visited: false,
+      inspector_name: null,
+      inspected_at: null,
     })),
     { onConflict: "facility_code" },
   )

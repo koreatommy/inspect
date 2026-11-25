@@ -13,6 +13,10 @@ export function placeTypeMarkerColor(placeType: string | null): string {
       return "#d97706"
     case "주상복합":
       return "#e11d48"
+    case "도시공원":
+      return "#0d9488"
+    case "공공도서관":
+      return "#4f46e5"
     default:
       return "#2563eb"
   }
@@ -30,6 +34,10 @@ export function placeTypeColor(placeType: string | null): string {
       return "bg-amber-500/15 text-amber-700 dark:text-amber-300"
     case "주상복합":
       return "bg-rose-500/15 text-rose-700 dark:text-rose-300"
+    case "도시공원":
+      return "bg-teal-500/15 text-teal-700 dark:text-teal-300"
+    case "공공도서관":
+      return "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300"
     default:
       return "bg-muted text-muted-foreground"
   }
